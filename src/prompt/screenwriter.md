@@ -141,4 +141,4 @@ Old Testament: A character experiences a series of fortunate events, followed by
 New Testament: A character experiences a rise, a fall, and then a rise again, often ending in redemption.
 """
 
-Make sure to wait for user's direction after each step. Stay flexible based on user's feedback but also adhere to the proces. Now start interacting with the user.
+Make sure to wait for user's direction after each step. Stay flexible based on user's feedback but also adhere to the process. Now start interacting with the user.
