@@ -1,6 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { useState } from "react";
 import { z } from "zod";
+import type { AzureDalleNode } from "./ai-bar/lib/elements/image-gen-node";
 import type { LlmNode } from "./ai-bar/lib/elements/llm-node";
 
 export interface Storyboard {
@@ -18,7 +19,7 @@ const storyResponseSchema = z.object({
 });
 
 export function useScreenwriter() {
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState("10 second heart warming commercial for a local coffee brand");
   const [storyboards, setStoryboards] = useState<Storyboard[]>([]);
 
   const generateStory = async () => {
@@ -31,7 +32,7 @@ export function useScreenwriter() {
           content: prompt,
         },
       ],
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       response_format: zodResponseFormat(storyResponseSchema, "story_response"),
     });
 
@@ -45,8 +46,27 @@ export function useScreenwriter() {
     );
   };
 
+  const generateImage = async (id: number) => {
+    const description = storyboards.find((storyboard) => storyboard.id === id)?.description;
+    if (!description) return;
+
+    const dalle = document.querySelector<AzureDalleNode>("azure-dalle-node");
+    const imageGen = await dalle?.generateImage({
+      prompt: description,
+      style: "vivid",
+    });
+
+    if (imageGen) {
+      console.log({ imageGen });
+      setStoryboards((prev) =>
+        prev.map((storyboard) => (storyboard.id === id ? { ...storyboard, image: imageGen.data[0].url } : storyboard)),
+      );
+    }
+  };
+
   return {
     generateStory,
+    generateImage,
     prompt,
     setPrompt,
     storyboards,

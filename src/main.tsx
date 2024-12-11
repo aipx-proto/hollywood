@@ -7,10 +7,14 @@ import { useScreenwriter } from "./lib/screenwriter";
 loadAIBar();
 
 function App() {
-  const { generateStory, prompt, setPrompt, storyboards } = useScreenwriter();
+  const { generateStory, generateImage, prompt, setPrompt, storyboards } = useScreenwriter();
 
   const handleGenerateStoryboards = async () => {
     generateStory();
+  };
+
+  const handleVisualize = async (id: number) => {
+    generateImage(id);
   };
 
   return (
@@ -31,6 +35,8 @@ function App() {
         {storyboards.map((storyboard) => (
           <div key={storyboard.id} className="story-board-item">
             <p>{storyboard.description}</p>
+            {storyboard.image ? <img className="preview" src={storyboard.image} /> : null}
+            <button onClick={() => handleVisualize(storyboard.id)}>Visualize</button>
           </div>
         ))}
       </div>

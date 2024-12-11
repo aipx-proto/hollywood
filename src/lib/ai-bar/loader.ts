@@ -6,6 +6,7 @@ import { defineDragHandle } from "./lib/elements/drag-handle";
 import { defineElevenLabsTtsNode } from "./lib/elements/eleven-labs-tts-node";
 import { defineGestureControl } from "./lib/elements/gesture-control";
 import { defineHideBar } from "./lib/elements/hide-bar";
+import { defineAzureDalleNode } from "./lib/elements/image-gen-node";
 import { defineLlmNode } from "./lib/elements/llm-node";
 import { defineScreenCapture } from "./lib/elements/screen-capture";
 import { defineSttNode } from "./lib/elements/stt-node";
@@ -27,6 +28,7 @@ export function loadAIBar() {
   defineWalkieTalkieButton();
   defineGestureControl();
   defineElevenLabsTtsNode();
+  defineAzureDalleNode();
 
   defineAIBar();
 }
