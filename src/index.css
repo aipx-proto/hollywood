@@ -16,17 +16,24 @@ body {
     sans-serif;
 }
 
-.field {
+.app-layout {
   display: grid;
 }
 
-.story-board {
+.narrative-board {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
 }
 
-.preview {
-  width: 200px;
-  height: 200px;
-  object-fit: cover;
+.narrative-option {
+  display: grid;
+  gap: 0.25rem;
+  text-align: start;
+  align-content: start;
+
+  &[aria-pressed="true"] {
+    background-color: black;
+    color: white;
+  }
 }

@@ -28,6 +28,8 @@ export class AzureDalleNode extends HTMLElement {
       .then((res) => res.json())
       .then((result) => result as ImageGenerationResult);
 
+    if ((response as any).error) throw new Error((response as any).message);
+
     return response;
   }
 }

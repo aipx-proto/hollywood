@@ -1,45 +1,82 @@
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { narratives, type Narrative } from "./data/narratives";
 import "./index.css";
+import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
-import { useScreenwriter } from "./lib/screenwriter";
 
 loadAIBar();
 
+const llmNode = document.querySelector<LlmNode>("llm-node");
+
+export interface AppState {
+  goal: string;
+  narratives: Narrative[];
+  story: string;
+  characters: Character[];
+  scenes: Scene[];
+}
+
+export interface Character {
+  name: string;
+  background: string;
+}
+
+export interface Scene {
+  description: string;
+}
+
 function App() {
-  const { generateStory, generateImage, prompt, setPrompt, storyboards } = useScreenwriter();
+  const [state, setState] = useState<AppState>({
+    goal: "Promote a coffee brand for diverse communities in Seattle",
+    narratives: narratives.map((n, i) => ({ ...n, selected: i === 0 })),
+    story: "",
+    characters: [],
+    scenes: [],
+  });
 
-  const handleGenerateStoryboards = async () => {
-    generateStory();
-  };
-
-  const handleVisualize = async (id: number) => {
-    generateImage(id);
+  const handleGenerateStory = async () => {
+    setState((prev) => ({ ...prev, story: "Generating story..." }));
   };
 
   return (
     <div className="app-layout">
-      <div className="field">
-        <label>
-          <b>Prompt</b>
-        </label>
-        <textarea
-          placeholder="15 seconds commercial for Seattle FIFA World Cup"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        ></textarea>
-        <button onClick={handleGenerateStoryboards}>Generate</button>
-      </div>
-      <div className="story-board">
-        <b>Storyboard</b>
-        {storyboards.map((storyboard) => (
-          <div key={storyboard.id} className="story-board-item">
-            <p>{storyboard.description}</p>
-            {storyboard.image ? <img className="preview" src={storyboard.image} /> : null}
-            <button onClick={() => handleVisualize(storyboard.id)}>Visualize</button>
-          </div>
+      <h2>Goal</h2>
+      <textarea value={state.goal} onChange={(e) => setState((prev) => ({ ...prev, goal: e.target.value }))}></textarea>
+
+      <h2>Narrative</h2>
+      <div className="narrative-board">
+        {state.narratives.map((n) => (
+          <button
+            className="narrative-option"
+            aria-pressed={!!n.selected}
+            key={n.name}
+            onClick={() =>
+              setState((prev) => ({
+                ...prev,
+                narratives: prev.narratives.map((narrative) => ({
+                  ...narrative,
+                  selected: narrative.name === n.name,
+                })),
+              }))
+            }
+          >
+            <b>{n.name}</b>
+            <span>{n.description}</span>
+          </button>
         ))}
       </div>
+
+      <h2>Story</h2>
+      <div>
+        <button onClick={handleGenerateStory}>Generate</button>
+      </div>
+      <textarea
+        value={state.story}
+        onChange={(e) => setState((prev) => ({ ...prev, story: e.target.value }))}
+      ></textarea>
+
+      <h2>Cinematography</h2>
     </div>
   );
 }

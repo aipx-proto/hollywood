@@ -116,7 +116,8 @@ export class LlmNode extends HTMLElement implements LlmProvider {
 
   public getClient() {
     const credentials = this.closest<AIBar>("ai-bar")?.getAzureConnection();
-    if (!credentials) throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
+    if (!credentials)
+      throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
     const openai = new AzureOpenAI({
       endpoint: credentials.aoaiEndpoint,
       apiKey: credentials.aoaiKey,
@@ -129,7 +130,8 @@ export class LlmNode extends HTMLElement implements LlmProvider {
 
   public async submit(text: string) {
     const credentials = this.closest<AIBar>("ai-bar")?.getAzureConnection();
-    if (!credentials) throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
+    if (!credentials)
+      throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
     const openai = new AzureOpenAI({
       endpoint: credentials.aoaiEndpoint,
       apiKey: credentials.aoaiKey,
@@ -182,7 +184,7 @@ export class LlmNode extends HTMLElement implements LlmProvider {
       },
       {
         signal: ac.signal,
-      }
+      },
     );
 
     stream.on("content", (delta, _snapshot) => {
@@ -258,7 +260,9 @@ export class LlmNode extends HTMLElement implements LlmProvider {
     if (lastMessage?.role !== "user") return messages;
 
     const lastMessageParts =
-      typeof lastMessage.content === "string" ? [{ type: "text", text: lastMessage.content } as ChatMessageTextPart] : lastMessage.content;
+      typeof lastMessage.content === "string"
+        ? [{ type: "text", text: lastMessage.content } as ChatMessageTextPart]
+        : lastMessage.content;
     const decoratedMessage = {
       ...lastMessage,
       content: [

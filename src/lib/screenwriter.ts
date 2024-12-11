@@ -64,9 +64,16 @@ export function useScreenwriter() {
     }
   };
 
+  const simulateStory = async () => {
+    const aoai = document.querySelector<LlmNode>("llm-node")!.getClient();
+
+    aoai.beta.chat.completions.runTools;
+  };
+
   return {
     generateStory,
     generateImage,
+    simulateStory,
     prompt,
     setPrompt,
     storyboards,
