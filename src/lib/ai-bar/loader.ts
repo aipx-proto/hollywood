@@ -15,6 +15,11 @@ import { defineTtsNode } from "./lib/elements/tts-node";
 import { defineWalkieTalkieButton } from "./lib/elements/walkie-talkie-button";
 
 export function loadAIBar() {
+  // check if the custom element is already defined
+  if (customElements.get("text-chat")) {
+    return;
+  }
+
   defineTextChat();
   defineDragHandle();
   defineAzureConnection();

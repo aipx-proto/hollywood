@@ -5,9 +5,9 @@ import "./index.css";
 import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
 
-loadAIBar();
-
 const llmNode = document.querySelector<LlmNode>("llm-node");
+
+loadAIBar();
 
 export interface AppState {
   goal: string;
@@ -36,7 +36,46 @@ function App() {
   });
 
   const handleGenerateStory = async () => {
+    const client = await llmNode?.getClient();
+    if (!client) return;
+
+    const selectedNarrative = state.narratives.find((n) => n.selected);
+
     setState((prev) => ({ ...prev, story: "Generating story..." }));
+    const response = await client.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `Help user write a story based on their goal and a narrative. Respond in this JSON format
+{
+  story: string; // one sentence brief summary of the story
+  characters: {
+    abstractRole: string; // the abstract role in the narrative
+    concreteRole: string; // the concrete role of the character in the story
+  }[];
+}
+          `,
+        },
+        {
+          role: "user",
+          content: `Goal: ${state.goal}
+Narrative: ${selectedNarrative?.name} - ${selectedNarrative?.description}
+          `.trim(),
+        },
+      ],
+      model: "gpt-4o-mini",
+      response_format: {
+        type: "json_object",
+      },
+    });
+
+    const parsed = JSON.parse(response.choices[0].message.content ?? "{}");
+
+    setState((prev) => ({
+      ...prev,
+      story: parsed.story,
+      characters: (parsed.characters as any[]).map((c) => ({ name: c.concreteRole, background: c.abstractRole })),
+    }));
   };
 
   return (
@@ -75,6 +114,17 @@ function App() {
         value={state.story}
         onChange={(e) => setState((prev) => ({ ...prev, story: e.target.value }))}
       ></textarea>
+
+      {state.characters.length > 0 ? (
+        <div className="character-grid">
+          {state.characters.map((c) => (
+            <div className="character-card" key={c.name}>
+              <b>{c.background}</b>
+              <span>{c.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <h2>Cinematography</h2>
     </div>
