@@ -2,9 +2,10 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
-
 import { system, user } from "./lib/message";
-import { tryParse } from "./lib/parse";
+
+import { filter, tap } from "rxjs";
+import { parseJsonStream } from "./lib/json-stream";
 import "./theater.css";
 
 const llmNode = document.querySelector<LlmNode>("llm-node");
@@ -33,7 +34,10 @@ function App() {
     const aoai = llmNode?.getClient();
     if (!aoai) return;
 
+    patchState({ audienceSims: [] });
+
     const response = await aoai.chat.completions.create({
+      stream: true,
       messages: [
         system`Generate a list of personas that would fit into the provided description. Respond in a valid JSON object of this type:
 
@@ -49,13 +53,18 @@ interface Persona = {
         user`${state.targetAudience}`,
       ],
       model: "gpt-4o",
+      temperature: 0.7,
       response_format: {
         type: "json_object",
       },
     });
 
-    const parsed = tryParse<{ personas: AudienceSim[] }>(response.choices[0].message.content, { personas: [] });
-    patchState({ audienceSims: parsed.personas });
+    parseJsonStream(response)
+      .pipe(
+        filter((value) => typeof value.key === "number"),
+        tap((v) => setState((s) => ({ ...s, audienceSims: [...s.audienceSims, v.value as any] }))),
+      )
+      .subscribe();
   };
 
   return (
