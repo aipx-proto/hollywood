@@ -1,9 +1,14 @@
+import type { ChatCompletionContentPart } from "openai/resources/index.mjs";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { filter, tap } from "rxjs";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
+import type { AzureDalleNode } from "./lib/ai-bar/lib/elements/image-gen-node";
 import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
+import { parseJsonStream } from "./lib/json-stream";
+import { system, user } from "./lib/message";
 import "./storyboard.css";
 
 const llmNode = document.querySelector<LlmNode>("llm-node");
@@ -17,6 +22,8 @@ export interface AppState {
   characters: Character[];
   scenes: Scene[];
   techniques: Technique[];
+  targetAudience: string;
+  audienceSims: AudienceSim[];
 }
 
 export interface Character {
@@ -27,6 +34,13 @@ export interface Character {
 export interface Scene {
   title: string;
   description: string;
+  image?: string;
+}
+
+export interface AudienceSim {
+  name: string;
+  background: string;
+  memory: string[];
 }
 
 function App() {
@@ -37,7 +51,11 @@ function App() {
     characters: [],
     scenes: [],
     techniques: techniques,
+    targetAudience: "Outdoor activity enthusiasts who live in the Pacific Northwest",
+    audienceSims: [],
   });
+
+  const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
 
   const handleGenerateStory = async () => {
     const client = await llmNode?.getClient();
@@ -47,7 +65,9 @@ function App() {
     const selectedTechniques = state.techniques.filter((t) => t.selected);
 
     setState((prev) => ({ ...prev, story: "Generating story..." }));
+
     const response = await client.chat.completions.create({
+      stream: true,
       messages: [
         {
           role: "system",
@@ -79,22 +99,36 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}`.trim
       },
     });
 
-    const parsed = JSON.parse(response.choices[0].message.content ?? "{}");
-
-    setState((prev) => ({
-      ...prev,
-      story: parsed.story,
-      characters: (parsed.characters as any[]).map((c) => ({ name: c.concreteRole, background: c.abstractRole })),
-    }));
+    parseJsonStream(response)
+      .pipe(
+        tap((v) => {
+          if (v.key === "story") {
+            setState((prev) => ({ ...prev, story: v.value as string }));
+          } else if (typeof v.key === "number") {
+            setState((prev) => ({
+              ...prev,
+              characters: [
+                ...prev.characters,
+                { name: (v.value as any).concreteRole, background: (v.value as any).abstractRole },
+              ],
+            }));
+          }
+        }),
+      )
+      .subscribe();
   };
 
   const handleGenerateScenes = async () => {
     const client = await llmNode?.getClient();
     if (!client) return;
 
+    // clear the scenes
+    setState((prev) => ({ ...prev, scenes: [] }));
+
     const selectedNarrative = state.narratives.find((n) => n.selected);
     const selectedTechniques = state.techniques.filter((t) => t.selected);
     const response = await client.chat.completions.create({
+      stream: true,
       messages: [
         {
           role: "system",
@@ -129,12 +163,111 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
       },
     });
 
-    const parsed = JSON.parse(response.choices[0].message.content ?? "{}");
+    parseJsonStream(response)
+      .pipe(
+        tap((v) => {
+          if (typeof v.key === "number") {
+            setState((prev) => {
+              return {
+                ...prev,
+                scenes: [...prev.scenes, v.value as any],
+              };
+            });
+          }
+        }),
+      )
+      .subscribe();
+  };
+
+  const handleInviteAudience = async () => {
+    const aoai = llmNode?.getClient();
+    if (!aoai) return;
+
+    patchState({ audienceSims: [] });
+
+    const response = await aoai.chat.completions.create({
+      stream: true,
+      messages: [
+        system`Generate a list of personas that would fit into the provided description. Respond in a valid JSON object of this type:
+
+type Response = {
+  personas: Persona[];
+}
+
+interface Persona = {
+  name: string; /* imaginary name of the person */
+  background: string; /* profoundly personal background about this person */
+}
+        `,
+        user`${state.targetAudience}`,
+      ],
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      response_format: {
+        type: "json_object",
+      },
+    });
+
+    parseJsonStream(response)
+      .pipe(
+        filter((value) => typeof value.key === "number"),
+        tap((v) => setState((s) => ({ ...s, audienceSims: [...s.audienceSims, v.value as any] }))),
+      )
+      .subscribe();
+  };
+
+  const handleShowScene = async (i: number) => {
+    const azureDalleNode = document.querySelector<AzureDalleNode>("azure-dalle-node");
+    if (!azureDalleNode) return;
+
+    const img = await azureDalleNode.generateImage({
+      prompt: state.scenes[i].description,
+      style: "vivid",
+    });
 
     setState((prev) => ({
       ...prev,
-      scenes: parsed.scenes,
+      scenes: prev.scenes.map((scene, j) => (j === i ? { ...scene, image: img.data.at(0)?.url } : scene)),
     }));
+  };
+
+  const handleReact = async (i: number) => {
+    const aoai = llmNode?.getClient();
+    if (!aoai) return;
+
+    const response = await aoai.chat.completions.create({
+      messages: [
+        system`React to the scene with a short description of what you see.
+        `,
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: state.scenes[i].image,
+              },
+            } as ChatCompletionContentPart,
+          ],
+        },
+      ],
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+    });
+
+    console.log(response.choices[0]?.message.content);
+  };
+
+  const handleAddScene = () => {
+    patchState({
+      scenes: [
+        ...state.scenes,
+        {
+          title: "New scene",
+          description: "A beautiful sunset over the mountains",
+        },
+      ],
+    });
   };
 
   return (
@@ -214,11 +347,28 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
         <button onClick={handleGenerateScenes}>Generate</button>
       </div>
 
-      <div>
+      <div className="scene-list">
         {state.scenes.map((scene, i) => (
-          <div key={i}>
+          <div key={i} className="scene-card">
             <b>{scene.title}</b>
             <p>{scene.description}</p>
+            <button onClick={() => handleShowScene(i)}>Visualize</button>
+            <button onClick={() => handleReact(i)}>Screen</button>
+            {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
+          </div>
+        ))}
+      </div>
+
+      <h2>Invite audience</h2>
+      <textarea
+        value={state.targetAudience}
+        onChange={(e) => setState((prev) => ({ ...prev, targetAudience: e.target.value }))}
+      ></textarea>
+      <button onClick={handleInviteAudience}>Invite</button>
+      <div>
+        {state.audienceSims.map((sim, i) => (
+          <div key={i} className="audience-sim">
+            <b>{sim.name}</b> <span>{sim.background}</span>
           </div>
         ))}
       </div>
