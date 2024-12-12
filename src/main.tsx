@@ -1,6 +1,7 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { narratives, type Narrative } from "./data/narratives";
+import { techniques, type Technique } from "./data/techniques";
 import "./index.css";
 import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
@@ -15,6 +16,7 @@ export interface AppState {
   story: string;
   characters: Character[];
   scenes: Scene[];
+  techniques: Technique[];
 }
 
 export interface Character {
@@ -23,16 +25,18 @@ export interface Character {
 }
 
 export interface Scene {
+  title: string;
   description: string;
 }
 
 function App() {
   const [state, setState] = useState<AppState>({
     goal: "Promote a coffee brand for diverse communities in Seattle",
-    narratives: narratives.map((n, i) => ({ ...n, selected: i === 0 })),
+    narratives: narratives,
     story: "",
     characters: [],
     scenes: [],
+    techniques: techniques,
   });
 
   const handleGenerateStory = async () => {
@@ -40,13 +44,14 @@ function App() {
     if (!client) return;
 
     const selectedNarrative = state.narratives.find((n) => n.selected);
+    const selectedTechniques = state.techniques.filter((t) => t.selected);
 
     setState((prev) => ({ ...prev, story: "Generating story..." }));
     const response = await client.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: `Help user write a story based on their goal and a narrative. Respond in this JSON format
+          content: `Help user write a story based on their goal, a narrative, and techniques. Respond in this JSON format
 {
   story: string; // one sentence brief summary of the story
   characters: {
@@ -58,9 +63,13 @@ function App() {
         },
         {
           role: "user",
-          content: `Goal: ${state.goal}
-Narrative: ${selectedNarrative?.name} - ${selectedNarrative?.description}
-          `.trim(),
+          content: `
+          Goal: ${state.goal}
+
+Theme: ${selectedNarrative?.name} - ${selectedNarrative?.description}
+
+Techniques:
+${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}`.trim(),
         },
       ],
       model: "gpt-4o",
@@ -76,6 +85,55 @@ Narrative: ${selectedNarrative?.name} - ${selectedNarrative?.description}
       ...prev,
       story: parsed.story,
       characters: (parsed.characters as any[]).map((c) => ({ name: c.concreteRole, background: c.abstractRole })),
+    }));
+  };
+
+  const handleGenerateScenes = async () => {
+    const client = await llmNode?.getClient();
+    if (!client) return;
+
+    const selectedNarrative = state.narratives.find((n) => n.selected);
+    const selectedTechniques = state.techniques.filter((t) => t.selected);
+    const response = await client.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `Use the provided Theme, Story, Characters, and Techniques to develop cinematographic oriented commercial. Describe the scenes in this JSON format
+{
+  scenes: {
+    title: string; // title of the scene
+    description: string; // description of the scene
+  }[];
+}
+          `,
+        },
+        {
+          role: "user",
+          content: `
+Theme: ${selectedNarrative?.name} - ${selectedNarrative?.description}
+
+Story: ${state.story}
+
+Characters:
+${state.characters.map((c) => `${c.name} - ${c.background}`).join("\n")}
+
+Techniques:
+${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
+`.trim(),
+        },
+      ],
+      model: "gpt-4o",
+      temperature: 0.7,
+      response_format: {
+        type: "json_object",
+      },
+    });
+
+    const parsed = JSON.parse(response.choices[0].message.content ?? "{}");
+
+    setState((prev) => ({
+      ...prev,
+      scenes: parsed.scenes,
     }));
   };
 
@@ -107,6 +165,30 @@ Narrative: ${selectedNarrative?.name} - ${selectedNarrative?.description}
         ))}
       </div>
 
+      <h2>Add-ons</h2>
+
+      <div className="narrative-board">
+        {state.techniques.map((techniques) => (
+          <button
+            className="narrative-option"
+            key={techniques.name}
+            aria-pressed={!!techniques.selected}
+            onClick={() =>
+              setState((prev) => ({
+                ...prev,
+                techniques: prev.techniques.map((technique) => ({
+                  ...technique,
+                  selected: technique.name === techniques.name ? !technique.selected : technique.selected,
+                })),
+              }))
+            }
+          >
+            <b>{techniques.name}</b>
+            <p title={techniques.example}>{techniques.definition}</p>
+          </button>
+        ))}
+      </div>
+
       <h2>Story</h2>
       <div>
         <button onClick={handleGenerateStory}>Generate</button>
@@ -128,6 +210,18 @@ Narrative: ${selectedNarrative?.name} - ${selectedNarrative?.description}
       ) : null}
 
       <h2>Cinematography</h2>
+      <div>
+        <button onClick={handleGenerateScenes}>Generate</button>
+      </div>
+
+      <div>
+        {state.scenes.map((scene, i) => (
+          <div key={i}>
+            <b>{scene.title}</b>
+            <p>{scene.description}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
