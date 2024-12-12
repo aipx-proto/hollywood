@@ -47,3 +47,13 @@ body {
     color: white;
   }
 }
+
+.scene-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.scene-card {
+  display: grid;
+  gap: 0.25rem;
+}

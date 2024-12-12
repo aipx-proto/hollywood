@@ -40,7 +40,7 @@ export interface Scene {
 export interface AudienceSim {
   name: string;
   background: string;
-  memory: string[];
+  reactions: string[];
 }
 
 function App() {
@@ -345,6 +345,7 @@ interface Persona = {
       <h2>Cinematography</h2>
       <div>
         <button onClick={handleGenerateScenes}>Generate</button>
+        <button>Revise</button>
       </div>
 
       <div className="scene-list">
