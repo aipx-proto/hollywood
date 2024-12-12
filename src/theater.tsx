@@ -1,0 +1,84 @@
+import { StrictMode, useState } from "react";
+import { createRoot } from "react-dom/client";
+import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
+import { loadAIBar } from "./lib/ai-bar/loader";
+
+import { system, user } from "./lib/message";
+import { tryParse } from "./lib/parse";
+import "./theater.css";
+
+const llmNode = document.querySelector<LlmNode>("llm-node");
+
+loadAIBar();
+
+export interface AppState {
+  targetAudience: string;
+  audienceSims: AudienceSim[];
+}
+
+export interface AudienceSim {
+  name: string;
+  background: string;
+}
+
+function App() {
+  const [state, setState] = useState<AppState>({
+    targetAudience: "Outdoor activity enthusiasts who live in the Pacific Northwest",
+    audienceSims: [],
+  });
+
+  const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
+
+  const handleInviteAudience = async () => {
+    const aoai = llmNode?.getClient();
+    if (!aoai) return;
+
+    const response = await aoai.chat.completions.create({
+      messages: [
+        system`Generate a list of personas that would fit into the provided description. Respond in a valid JSON object of this type:
+
+type Response = {
+  personas: Persona[];
+}
+
+interface Persona = {
+  name: string; /* imaginary name of the person */
+  background: string; /* profoundly personal background about this person */
+}
+        `,
+        user`${state.targetAudience}`,
+      ],
+      model: "gpt-4o",
+      response_format: {
+        type: "json_object",
+      },
+    });
+
+    const parsed = tryParse<{ personas: AudienceSim[] }>(response.choices[0].message.content, { personas: [] });
+    patchState({ audienceSims: parsed.personas });
+  };
+
+  return (
+    <div className="app-layout">
+      <h2>Invite audience</h2>
+      <textarea
+        value={state.targetAudience}
+        onChange={(e) => patchState({ targetAudience: e.target.value })}
+      ></textarea>
+      <button onClick={handleInviteAudience}>Invite</button>
+      <div>
+        {state.audienceSims.map((sim, i) => (
+          <div key={i} className="audience-sim">
+            <b>{sim.name}</b> <span>{sim.background}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

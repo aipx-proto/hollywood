@@ -2,9 +2,9 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
-import "./index.css";
 import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
+import "./storyboard.css";
 
 const llmNode = document.querySelector<LlmNode>("llm-node");
 
