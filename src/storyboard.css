@@ -56,4 +56,8 @@ body {
 .scene-card {
   display: grid;
   gap: 0.25rem;
+
+  img {
+    max-width: 320px;
+  }
 }
