@@ -37,6 +37,7 @@ export interface Scene {
   title: string;
   description: string;
   image?: string;
+  isShowing?: boolean;
 }
 
 export interface AudienceSim {
@@ -188,14 +189,16 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
       .subscribe();
   };
 
-  const handleShowScene = async (i: number) => {
+  const handleVisualize = async (i: number) => {
     const azureDalleNode = document.querySelector<AzureDalleNode>("azure-dalle-node");
     if (!azureDalleNode) return;
 
     // show placeholder
     setState((prev) => ({
       ...prev,
-      scenes: prev.scenes.map((scene, j) => (j === i ? { ...scene, image: "https://placehold.co/1024" } : scene)),
+      scenes: prev.scenes.map((scene, j) =>
+        j === i ? { ...scene, image: "https://placehold.co/1080?text=Sketching..." } : scene,
+      ),
     }));
 
     const img = await azureDalleNode.generateImage({
@@ -502,7 +505,7 @@ ${state.audienceSims
             <div key={i} className="scene-card">
               <b>{scene.title}</b>
               <p>{scene.description}</p>
-              <button onClick={() => handleShowScene(i)}>Visualize</button>
+              <button onClick={() => handleVisualize(i)}>Visualize</button>
               <button onClick={() => handleReact(i)}>Screen</button>
               {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
               {state.audienceSims
@@ -535,8 +538,37 @@ ${state.audienceSims
         ))}
       </aside>
       <main className="main-layout">
-        <div>
-          <img src="https://placehold.co/1080x720?text=Screen" alt="screen" />
+        <div className="screens">
+          {state.scenes.find((scene) => scene.isShowing)?.image ? (
+            <img src={state.scenes.find((scene) => scene.isShowing)!.image} alt="screen" />
+          ) : (
+            <img src="https://placehold.co/720?text=Screen" alt="screen" />
+          )}
+          <div>
+            {state.scenes.map((scene, i) => (
+              <button
+                key={i}
+                aria-pressed={scene.isShowing}
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    scenes: prev.scenes.map((scene, j) => ({ ...scene, isShowing: i === j })),
+                  }))
+                }
+              >
+                {i}
+              </button>
+            ))}
+          </div>
+          {state.scenes.find((scene) => scene.isShowing) ? (
+            <div>
+              <h2>{state.scenes.find((scene) => scene.isShowing)?.title}</h2>
+              <p>{state.scenes.find((scene) => scene.isShowing)?.description}</p>
+              <button title="visualize" onClick={() => handleVisualize(state.scenes.findIndex((s) => s.isShowing))}>
+                Visualize
+              </button>
+            </div>
+          ) : null}
         </div>
         <div className="audience-layer">
           {state.audienceSims.map((sim, i) => (
