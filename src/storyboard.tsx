@@ -139,7 +139,7 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}`.trim
           role: "system",
           content:
             `Use the provided Theme, Story, Characters, and Techniques to develop cinematographic oriented commercial. Describe the scenes in the following JSON format.
-Each scene description should capture only one key moment. Include foreground, background, lighting, composition, camera positioning. Keep it simple. Avoid motion.
+Each scene description should capture only one key moment. Include foreground, background, lighting, composition, camera positioning. Keep it simple. Do NOT mention art style. Do NOT describe motion. Still frame only.
 
 {
   scenes: {
