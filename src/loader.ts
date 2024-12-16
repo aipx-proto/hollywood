@@ -9,8 +9,4 @@ switch (concept) {
     import("./storyboard");
     break;
   }
-  case "theater": {
-    import("./theater");
-    break;
-  }
 }

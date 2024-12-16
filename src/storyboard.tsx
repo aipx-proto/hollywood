@@ -10,6 +10,8 @@ import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { parseJsonStream } from "./lib/json-stream";
 import { system, user } from "./lib/message";
+import { useGenerateStory } from "./prompt/generate-story";
+import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
 import { useInviteAudience } from "./prompt/invite-audience";
 import "./storyboard.css";
 
@@ -22,20 +24,29 @@ export interface AppState {
   narratives: Narrative[];
   story: string;
   characters: Character[];
-  scenes: Scene[];
+  frames: Frame[];
+  acts: Act[];
   techniques: Technique[];
   targetAudience: string;
   audienceSims: AudienceSim[];
 }
 
 export interface Character {
-  name: string;
-  background: string;
+  realRole: string;
+  symbolicRole: string;
+  backstory: string;
 }
 
-export interface Scene {
+export interface Act {
   title: string;
   description: string;
+  isActive?: boolean;
+}
+
+export interface Frame {
+  title: string;
+  story: string;
+  visualSnapshot: string;
   image?: string;
   isShowing?: boolean;
 }
@@ -53,7 +64,8 @@ function App() {
     narratives: narratives,
     story: "",
     characters: [],
-    scenes: [],
+    frames: [],
+    acts: [],
     techniques: techniques,
     targetAudience: "Outdoor activity enthusiasts who live in the Pacific Northwest",
     audienceSims: [],
@@ -61,133 +73,9 @@ function App() {
 
   const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
 
-  const { handleInviteAudience } = useInviteAudience({ state, setState, patchState });
-
-  const handleGenerateStory = async () => {
-    const client = await llmNode?.getClient();
-    if (!client) return;
-
-    const selectedNarrative = state.narratives.find((n) => n.selected);
-    const selectedTechniques = state.techniques.filter((t) => t.selected);
-
-    setState((prev) => ({ ...prev, story: "Generating story..." }));
-
-    const response = await client.chat.completions.create({
-      stream: true,
-      messages: [
-        {
-          role: "system",
-          content: `Help user write a story based on their goal, a narrative, and techniques. Respond in this JSON format
-{
-  story: string; // one sentence brief summary of the story
-  characters: {
-    abstractRole: string; // the abstract role in the narrative
-    concreteRole: string; // the concrete role of the character in the story
-  }[];
-}
-          `,
-        },
-        {
-          role: "user",
-          content: `
-          Goal: ${state.goal}
-
-Theme: ${selectedNarrative?.name} - ${selectedNarrative?.description}
-
-Techniques:
-${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}`.trim(),
-        },
-      ],
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      response_format: {
-        type: "json_object",
-      },
-    });
-
-    parseJsonStream(response)
-      .pipe(
-        tap((v) => {
-          if (v.key === "story") {
-            setState((prev) => ({ ...prev, story: v.value as string }));
-          } else if (typeof v.key === "number") {
-            setState((prev) => ({
-              ...prev,
-              characters: [
-                ...prev.characters,
-                { name: (v.value as any).concreteRole, background: (v.value as any).abstractRole },
-              ],
-            }));
-          }
-        }),
-      )
-      .subscribe();
-  };
-
-  const handleGenerateScenes = async () => {
-    const client = await llmNode?.getClient();
-    if (!client) return;
-
-    // clear the scenes
-    setState((prev) => ({ ...prev, scenes: [] }));
-
-    const selectedNarrative = state.narratives.find((n) => n.selected);
-    const selectedTechniques = state.techniques.filter((t) => t.selected);
-    const response = await client.chat.completions.create({
-      stream: true,
-      messages: [
-        {
-          role: "system",
-          content:
-            `Use the provided Theme, Story, Characters, and Techniques to develop cinematographic oriented commercial. Describe the scenes in the following JSON format.
-Each scene description should capture only one key moment. Include foreground, background, lighting, composition, camera positioning. Keep it simple. Do NOT mention art style. Do NOT describe motion. Still frame only.
-
-{
-  scenes: {
-    title: string; // title of the scene
-    description: string; // scene description
-  }[];
-}
-
-          `.trim(),
-        },
-        {
-          role: "user",
-          content: `
-Theme: ${selectedNarrative?.name} - ${selectedNarrative?.description}
-
-Story: ${state.story}
-
-Characters:
-${state.characters.map((c) => `${c.name} - ${c.background}`).join("\n")}
-
-Techniques:
-${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
-`.trim(),
-        },
-      ],
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      response_format: {
-        type: "json_object",
-      },
-    });
-
-    parseJsonStream(response)
-      .pipe(
-        tap((v) => {
-          if (typeof v.key === "number") {
-            setState((prev) => {
-              return {
-                ...prev,
-                scenes: [...prev.scenes, v.value as any],
-              };
-            });
-          }
-        }),
-      )
-      .subscribe();
-  };
+  const { inviteAudience } = useInviteAudience({ state, setState, patchState });
+  const { generateStory } = useGenerateStory({ state, setState });
+  const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
 
   const handleVisualize = async (i: number) => {
     const azureDalleNode = document.querySelector<AzureDalleNode>("azure-dalle-node");
@@ -196,21 +84,23 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
     // show placeholder
     setState((prev) => ({
       ...prev,
-      scenes: prev.scenes.map((scene, j) =>
+      frames: prev.frames.map((scene, j) =>
         j === i ? { ...scene, image: "https://placehold.co/1080?text=Sketching..." } : scene,
       ),
     }));
 
     const img = await azureDalleNode.generateImage({
       prompt:
-        state.scenes[i].description +
-        ` Lithographic, Moebius style with color blocking, well-defined outlines, similar to Sable`,
-      style: "natural",
+        state.frames[i].visualSnapshot +
+        ` Sketch in graphic novel illustration style, two-tone cross-hatch shading, well-defined outlines. Use large color blocks of earth-tone color.`,
+      style: "vivid",
     });
+
+    const altPrompt = ` Sketch in architecture drawing style, two-tone hatch shading, well-defined outlines. Use large color blocks of earth-tone color.`;
 
     setState((prev) => ({
       ...prev,
-      scenes: prev.scenes.map((scene, j) => (j === i ? { ...scene, image: img.data.at(0)?.url } : scene)),
+      frames: prev.frames.map((scene, j) => (j === i ? { ...scene, image: img.data.at(0)?.url } : scene)),
     }));
   };
 
@@ -229,13 +119,13 @@ Background: ${sim.background}
 
 The director will show you one scene at a time. Respond to the scene on screen with your reactions. Do not describe what you see. Instead, focus on your emotional reaction. You are encouraged to be critical.`,
           // this sim's reaction to previous scenes
-          ...state.scenes.slice(0, i).flatMap((scene, sceneNumber) => [
+          ...state.frames.slice(0, i).flatMap((scene, sceneNumber) => [
             {
               role: "user" as const,
               content: [
                 {
                   type: "text",
-                  text: scene.description,
+                  text: scene.story,
                 } as ChatCompletionContentPart,
                 {
                   type: "image_url",
@@ -255,12 +145,12 @@ The director will show you one scene at a time. Respond to the scene on screen w
             content: [
               {
                 type: "text",
-                text: state.scenes[i].description,
+                text: state.frames[i].story,
               },
               {
                 type: "image_url",
                 image_url: {
-                  url: state.scenes[i].image,
+                  url: state.frames[i].image,
                 },
               } as ChatCompletionContentPart,
             ],
@@ -303,7 +193,7 @@ You already watched a commericial and provided your critical feedback:
 
 ${state.audienceSims[i].reactions
   .map(
-    (reaction, j) => `Scene ${j + 1}: ${state.scenes[j].description}{
+    (reaction, j) => `Scene ${j + 1}: ${state.frames[j].story}{
 Scene ${j + 1} reaction: ${reaction}`,
   )
   .join("\n")}
@@ -336,7 +226,7 @@ Scene ${j + 1} reaction: ${reaction}`,
     if (!aoai) return;
 
     // clear the scenes
-    setState((prev) => ({ ...prev, scenes: [] }));
+    setState((prev) => ({ ...prev, frames: [] }));
 
     // clear previous reactions and feedback
     setState((prev) => ({
@@ -350,12 +240,12 @@ Scene ${j + 1} reaction: ${reaction}`,
         system`Revise the following scenes of a commercial based on the critical feedback of the test audience. 
         
 Current script:
-${state.scenes
+${state.frames
   .map(
     (scene, i) => `
 Scene ${i + 1}
 Title: ${scene.title}  
-Description: ${scene.description}
+Description: ${scene.story}
 `,
   )
   .join("\n")}
@@ -388,7 +278,7 @@ ${state.audienceSims
             setState((prev) => {
               return {
                 ...prev,
-                scenes: [...prev.scenes, v.value as any],
+                frames: [...prev.frames, v.value as any],
               };
             });
           }
@@ -398,7 +288,7 @@ ${state.audienceSims
   };
 
   return (
-    <div className="app-layout">
+    <div className="app-layout" data-has-scenes={state.frames.length > 0}>
       <aside className="control-panel">
         <h2>Goal</h2>
         <textarea
@@ -414,7 +304,7 @@ ${state.audienceSims
         ></textarea>
         <button
           onClick={() =>
-            handleInviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber)
+            inviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber)
           }
         >
           Invite
@@ -476,7 +366,7 @@ ${state.audienceSims
 
         <h2>Story</h2>
         <div>
-          <button onClick={handleGenerateStory}>Generate</button>
+          <button onClick={generateStory}>Generate</button>
         </div>
         <textarea
           value={state.story}
@@ -486,25 +376,34 @@ ${state.audienceSims
         {state.characters.length > 0 ? (
           <div className="character-grid">
             {state.characters.map((c) => (
-              <div className="character-card" key={c.name}>
-                <b>{c.background}</b>
-                <span>{c.name}</span>
+              <div className="character-card" key={c.realRole}>
+                <b>{c.symbolicRole}</b>
+                <span>{c.realRole}</span>
               </div>
             ))}
           </div>
         ) : null}
 
+        {state.acts.map((act, i) => (
+          <div key={i}>
+            <b>
+              Act {i + 1} - {act.title}
+            </b>
+            <p>{act.description}</p>
+          </div>
+        ))}
+
         <h2>Cinematography</h2>
         <div>
-          <button onClick={handleGenerateScenes}>Generate</button>
+          <button onClick={generateStoryboardFrames}>Generate</button>
           <button onClick={handleRevise}>Revise</button>
         </div>
 
         <div className="scene-list">
-          {state.scenes.map((scene, i) => (
+          {state.frames.map((scene, i) => (
             <div key={i} className="scene-card">
               <b>{scene.title}</b>
-              <p>{scene.description}</p>
+              <p>{scene.story}</p>
               <button onClick={() => handleVisualize(i)}>Visualize</button>
               <button onClick={() => handleReact(i)}>Screen</button>
               {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
@@ -539,20 +438,20 @@ ${state.audienceSims
       </aside>
       <main className="main-layout">
         <div className="screens">
-          {state.scenes.find((scene) => scene.isShowing)?.image ? (
-            <img src={state.scenes.find((scene) => scene.isShowing)!.image} alt="screen" />
+          {state.frames.find((scene) => scene.isShowing)?.image ? (
+            <img src={state.frames.find((scene) => scene.isShowing)!.image} alt="screen" />
           ) : (
             <img src="https://placehold.co/720?text=Screen" alt="screen" />
           )}
           <div>
-            {state.scenes.map((scene, i) => (
+            {state.frames.map((scene, i) => (
               <button
                 key={i}
                 aria-pressed={scene.isShowing}
                 onClick={() =>
                   setState((prev) => ({
                     ...prev,
-                    scenes: prev.scenes.map((scene, j) => ({ ...scene, isShowing: i === j })),
+                    frames: prev.frames.map((scene, j) => ({ ...scene, isShowing: i === j })),
                   }))
                 }
               >
@@ -560,11 +459,12 @@ ${state.audienceSims
               </button>
             ))}
           </div>
-          {state.scenes.find((scene) => scene.isShowing) ? (
+          {state.frames.find((scene) => scene.isShowing) ? (
             <div>
-              <h2>{state.scenes.find((scene) => scene.isShowing)?.title}</h2>
-              <p>{state.scenes.find((scene) => scene.isShowing)?.description}</p>
-              <button title="visualize" onClick={() => handleVisualize(state.scenes.findIndex((s) => s.isShowing))}>
+              <h2>{state.frames.find((scene) => scene.isShowing)?.title}</h2>
+              <p>{state.frames.find((scene) => scene.isShowing)?.story}</p>
+              <p>{state.frames.find((scene) => scene.isShowing)?.visualSnapshot}</p>
+              <button title="visualize" onClick={() => handleVisualize(state.frames.findIndex((s) => s.isShowing))}>
                 Visualize
               </button>
             </div>
