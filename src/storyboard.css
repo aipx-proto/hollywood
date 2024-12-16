@@ -1,7 +1,66 @@
-:root {
+/* reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
 }
 
 body {
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+p {
+  text-wrap: pretty;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
+
+#root {
+  isolation: isolate;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-size: 14px;
   font-family:
     system-ui,
     -apple-system,
@@ -18,6 +77,25 @@ body {
 
 .app-layout {
   display: grid;
+  grid-template-columns: auto 1fr;
+  height: 100vh;
+}
+
+.audience-layer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  img {
+    width: 120px;
+  }
+}
+
+.control-panel {
+  width: 400px;
+  display: grid;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .character-card {
@@ -27,13 +105,23 @@ body {
 
 .character-grid {
   display: grid;
-  gap: 1rem;
+  gap: 0.5rem;
+}
+
+.main-layout {
+  display: grid;
+  min-height: 0;
+
+  grid-template-rows: 1fr auto;
+
+  > :nth-child(2) {
+  }
 }
 
 .narrative-board {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .narrative-option {
@@ -60,4 +148,9 @@ body {
   img {
     max-width: 320px;
   }
+}
+
+textarea {
+  min-height: 3rem;
+  resize: vertical;
 }

@@ -1,7 +1,8 @@
 import type { ChatCompletionContentPart } from "openai/resources/index.mjs";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { filter, tap } from "rxjs";
+import { tap } from "rxjs";
+import { Avartar } from "./components/avatar-element";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
 import type { AzureDalleNode } from "./lib/ai-bar/lib/elements/image-gen-node";
@@ -9,6 +10,7 @@ import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { parseJsonStream } from "./lib/json-stream";
 import { system, user } from "./lib/message";
+import { useInviteAudience } from "./prompt/invite-audience";
 import "./storyboard.css";
 
 const llmNode = document.querySelector<LlmNode>("llm-node");
@@ -57,6 +59,8 @@ function App() {
   });
 
   const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
+
+  const { handleInviteAudience } = useInviteAudience({ state, setState, patchState });
 
   const handleGenerateStory = async () => {
     const client = await llmNode?.getClient();
@@ -133,14 +137,18 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}`.trim
       messages: [
         {
           role: "system",
-          content: `Use the provided Theme, Story, Characters, and Techniques to develop cinematographic oriented commercial. Describe the scenes in this JSON format
+          content:
+            `Use the provided Theme, Story, Characters, and Techniques to develop cinematographic oriented commercial. Describe the scenes in the following JSON format.
+Each scene description should capture only one key moment. Include foreground, background, lighting, composition, camera positioning. Keep it simple. Avoid motion.
+
 {
   scenes: {
     title: string; // title of the scene
-    description: string; // description of the scene
+    description: string; // scene description
   }[];
 }
-          `,
+
+          `.trim(),
         },
         {
           role: "user",
@@ -180,48 +188,6 @@ ${selectedTechniques.map((t) => `${t.name} - ${t.definition}`).join("\n")}
       .subscribe();
   };
 
-  const handleInviteAudience = async () => {
-    const aoai = llmNode?.getClient();
-    if (!aoai) return;
-
-    patchState({ audienceSims: [] });
-
-    const response = await aoai.chat.completions.create({
-      stream: true,
-      messages: [
-        system`Generate a list of personas that would fit into the provided description. Respond in a valid JSON object of this type:
-
-type Response = {
-  personas: Persona[];
-}
-
-interface Persona = {
-  name: string; /* imaginary name of the person */
-  background: string; /* profoundly personal background about this person */
-}
-        `,
-        user`${state.targetAudience}`,
-      ],
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      response_format: {
-        type: "json_object",
-      },
-    });
-
-    parseJsonStream(response)
-      .pipe(
-        filter((value) => typeof value.key === "number"),
-        tap((v) =>
-          setState((s) => ({
-            ...s,
-            audienceSims: [...s.audienceSims, { ...(v.value as any), reactions: [], feedback: "" } as AudienceSim],
-          })),
-        ),
-      )
-      .subscribe();
-  };
-
   const handleShowScene = async (i: number) => {
     const azureDalleNode = document.querySelector<AzureDalleNode>("azure-dalle-node");
     if (!azureDalleNode) return;
@@ -233,8 +199,10 @@ interface Persona = {
     }));
 
     const img = await azureDalleNode.generateImage({
-      prompt: state.scenes[i].description,
-      style: "vivid",
+      prompt:
+        state.scenes[i].description +
+        ` Lithographic, Moebius style with color blocking, well-defined outlines, similar to Sable`,
+      style: "natural",
     });
 
     setState((prev) => ({
@@ -428,132 +396,154 @@ ${state.audienceSims
 
   return (
     <div className="app-layout">
-      <h2>Goal</h2>
-      <textarea value={state.goal} onChange={(e) => setState((prev) => ({ ...prev, goal: e.target.value }))}></textarea>
+      <aside className="control-panel">
+        <h2>Goal</h2>
+        <textarea
+          value={state.goal}
+          onChange={(e) => setState((prev) => ({ ...prev, goal: e.target.value }))}
+        ></textarea>
 
-      <h2>Invite audience</h2>
-      <textarea
-        value={state.targetAudience}
-        onChange={(e) => setState((prev) => ({ ...prev, targetAudience: e.target.value }))}
-      ></textarea>
-      <button onClick={handleInviteAudience}>Invite</button>
-      <div>
-        {state.audienceSims.map((sim, i) => (
-          <div key={i} className="audience-sim">
-            <b>{sim.name}</b> <span>{sim.background}</span>
-          </div>
-        ))}
-      </div>
-
-      <h2>Narrative</h2>
-      <div className="narrative-board">
-        {state.narratives.map((n) => (
-          <button
-            className="narrative-option"
-            aria-pressed={!!n.selected}
-            key={n.name}
-            onClick={() =>
-              setState((prev) => ({
-                ...prev,
-                narratives: prev.narratives.map((narrative) => ({
-                  ...narrative,
-                  selected: narrative.name === n.name,
-                })),
-              }))
-            }
-          >
-            <b>{n.name}</b>
-            <span>{n.description}</span>
-          </button>
-        ))}
-      </div>
-
-      <h2>Add-ons</h2>
-
-      <div className="narrative-board">
-        {state.techniques.map((techniques) => (
-          <button
-            className="narrative-option"
-            key={techniques.name}
-            aria-pressed={!!techniques.selected}
-            onClick={() =>
-              setState((prev) => ({
-                ...prev,
-                techniques: prev.techniques.map((technique) => ({
-                  ...technique,
-                  selected: technique.name === techniques.name ? !technique.selected : technique.selected,
-                })),
-              }))
-            }
-          >
-            <b>{techniques.name}</b>
-            <p title={techniques.example}>{techniques.definition}</p>
-          </button>
-        ))}
-      </div>
-
-      <h2>Story</h2>
-      <div>
-        <button onClick={handleGenerateStory}>Generate</button>
-      </div>
-      <textarea
-        value={state.story}
-        onChange={(e) => setState((prev) => ({ ...prev, story: e.target.value }))}
-      ></textarea>
-
-      {state.characters.length > 0 ? (
-        <div className="character-grid">
-          {state.characters.map((c) => (
-            <div className="character-card" key={c.name}>
-              <b>{c.background}</b>
-              <span>{c.name}</span>
+        <h2>Invite audience</h2>
+        <input name="audienceCount" type="number" min={1} max={5} defaultValue={3} />
+        <textarea
+          value={state.targetAudience}
+          onChange={(e) => setState((prev) => ({ ...prev, targetAudience: e.target.value }))}
+        ></textarea>
+        <button
+          onClick={() =>
+            handleInviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber)
+          }
+        >
+          Invite
+        </button>
+        <div>
+          {state.audienceSims.map((sim, i) => (
+            <div key={i} className="audience-sim">
+              <b>{sim.name}</b> <span>{sim.background}</span>
             </div>
           ))}
         </div>
-      ) : null}
 
-      <h2>Cinematography</h2>
-      <div>
-        <button onClick={handleGenerateScenes}>Generate</button>
-        <button onClick={handleRevise}>Revise</button>
-      </div>
+        <h2>Narrative</h2>
+        <div className="narrative-board">
+          {state.narratives.map((n) => (
+            <button
+              className="narrative-option"
+              aria-pressed={!!n.selected}
+              key={n.name}
+              onClick={() =>
+                setState((prev) => ({
+                  ...prev,
+                  narratives: prev.narratives.map((narrative) => ({
+                    ...narrative,
+                    selected: narrative.name === n.name,
+                  })),
+                }))
+              }
+            >
+              <b>{n.name}</b>
+              <span>{n.description}</span>
+            </button>
+          ))}
+        </div>
 
-      <div className="scene-list">
-        {state.scenes.map((scene, i) => (
-          <div key={i} className="scene-card">
-            <b>{scene.title}</b>
-            <p>{scene.description}</p>
-            <button onClick={() => handleShowScene(i)}>Visualize</button>
-            <button onClick={() => handleReact(i)}>Screen</button>
-            {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
-            {state.audienceSims
-              .filter((sim) => sim.reactions.at(i))
-              .map((sim, j) => (
-                <div key={j} className="audience-sim">
-                  <b>{sim.name}</b>: <span>{sim.reactions.at(i)!}</span>
-                </div>
-              ))}
-          </div>
-        ))}
-      </div>
+        <h2>Add-ons</h2>
 
-      <h2>Feedback</h2>
-      {state.audienceSims.map((sim, i) => (
-        <div key={i} className="audience-sim">
-          <b>{sim.name}</b>
-          <details>
-            <span>{sim.background}</span>
-            {sim.reactions.map((reaction, j) => (
-              <div key={j} className="reaction">
-                <b>Scene {j + 1}</b>
-                <span>{reaction}</span>
+        <div className="narrative-board">
+          {state.techniques.map((techniques) => (
+            <button
+              className="narrative-option"
+              key={techniques.name}
+              aria-pressed={!!techniques.selected}
+              onClick={() =>
+                setState((prev) => ({
+                  ...prev,
+                  techniques: prev.techniques.map((technique) => ({
+                    ...technique,
+                    selected: technique.name === techniques.name ? !technique.selected : technique.selected,
+                  })),
+                }))
+              }
+            >
+              <b>{techniques.name}</b>
+              <p title={techniques.example}>{techniques.definition}</p>
+            </button>
+          ))}
+        </div>
+
+        <h2>Story</h2>
+        <div>
+          <button onClick={handleGenerateStory}>Generate</button>
+        </div>
+        <textarea
+          value={state.story}
+          onChange={(e) => setState((prev) => ({ ...prev, story: e.target.value }))}
+        ></textarea>
+
+        {state.characters.length > 0 ? (
+          <div className="character-grid">
+            {state.characters.map((c) => (
+              <div className="character-card" key={c.name}>
+                <b>{c.background}</b>
+                <span>{c.name}</span>
               </div>
             ))}
-          </details>
-          <button onClick={() => handleGetFeedback(i)}>Hear feedback</button>
-          <div>{sim.feedback}</div>
+          </div>
+        ) : null}
+
+        <h2>Cinematography</h2>
+        <div>
+          <button onClick={handleGenerateScenes}>Generate</button>
+          <button onClick={handleRevise}>Revise</button>
         </div>
-      ))}
+
+        <div className="scene-list">
+          {state.scenes.map((scene, i) => (
+            <div key={i} className="scene-card">
+              <b>{scene.title}</b>
+              <p>{scene.description}</p>
+              <button onClick={() => handleShowScene(i)}>Visualize</button>
+              <button onClick={() => handleReact(i)}>Screen</button>
+              {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
+              {state.audienceSims
+                .filter((sim) => sim.reactions.at(i))
+                .map((sim, j) => (
+                  <div key={j} className="audience-sim">
+                    <b>{sim.name}</b>: <span>{sim.reactions.at(i)!}</span>
+                  </div>
+                ))}
+            </div>
+          ))}
+        </div>
+
+        <h2>Feedback</h2>
+        {state.audienceSims.map((sim, i) => (
+          <div key={i} className="audience-sim">
+            <b>{sim.name}</b>
+            <details>
+              <span>{sim.background}</span>
+              {sim.reactions.map((reaction, j) => (
+                <div key={j} className="reaction">
+                  <b>Scene {j + 1}</b>
+                  <span>{reaction}</span>
+                </div>
+              ))}
+            </details>
+            <button onClick={() => handleGetFeedback(i)}>Hear feedback</button>
+            <div>{sim.feedback}</div>
+          </div>
+        ))}
+      </aside>
+      <main className="main-layout">
+        <div>
+          <img src="https://placehold.co/1080x720?text=Screen" alt="screen" />
+        </div>
+        <div className="audience-layer">
+          {state.audienceSims.map((sim, i) => (
+            <Avartar key={i} alt={sim.name} title={`${sim.name}\n${sim.background}`} />
+          ))}
+        </div>
+      </main>
     </div>
   );
 }
