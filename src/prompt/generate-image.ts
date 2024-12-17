@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { AzureDalleNode } from "../lib/ai-bar/lib/elements/image-gen-node";
+import type { AzureDalleNode } from "../lib/ai-bar/lib/elements/azure-dalle-node";
 import type { AppState } from "../storyboard";
 
 export interface UseGenerateImageProps {
