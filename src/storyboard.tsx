@@ -80,12 +80,12 @@ function App() {
   const { generateImage } = useGenerateImage({ state, setState });
   const { generateReaction } = useGenerateReaction({ state, setState });
 
-  const handleAvatarPress = (i: number) => {
+  const handleAvatarPress = (i: number | null) => {
     aiBar?.startRecording();
     groupInterview.setFocusedMember(i);
   };
 
-  const handleAvatarRelease = (i: number) => {
+  const handleAvatarRelease = () => {
     aiBar?.stopRecording();
   };
 
@@ -265,10 +265,13 @@ function App() {
 
         <div className="audience-layer">
           {state.audienceSims.map((sim, i) => (
-            <button key={i} onMouseDown={() => handleAvatarPress(i)} onMouseUp={() => handleAvatarRelease(i)}>
+            <button key={i} onMouseDown={() => handleAvatarPress(i)} onMouseUp={() => handleAvatarRelease()}>
               <Avartar alt={sim.name} title={`${sim.name}\n${sim.background}`} />
             </button>
           ))}
+          <button onMouseDown={() => handleAvatarPress(null)} onMouseUp={() => handleAvatarRelease()}>
+            Room
+          </button>
         </div>
       </main>
     </div>

@@ -92,12 +92,18 @@ body {
 
 .audience-layer {
   display: flex;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 1rem;
   margin: auto;
 
   img {
     width: 120px;
+  }
+
+  button:last-child {
+    min-height: 40px;
+    flex: 1 0 100%;
   }
 }
 

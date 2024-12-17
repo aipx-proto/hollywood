@@ -19,17 +19,21 @@ export class GroupInterview {
   #transcript: TranscriptEntry[] = [];
   #sims: AudienceSim[] = [];
   #focusedMember: AudienceSim | null = null;
-  #interactionRequest$ = new Subject<{ sim: AudienceSim; speech: string }>();
+  #interactionRequest$ = new Subject<{ focusedSim: AudienceSim | null; speech: string }>();
   #abortController = new AbortController();
 
   setGroupMembers(sims: AudienceSim[]) {
     this.#sims = sims;
   }
 
-  setFocusedMember(index: number) {
-    this.#focusedMember = this.#sims.at(index) ?? null;
-    if (!this.#focusedMember) {
-      console.warn(`No member found at index: ${index}`);
+  setFocusedMember(index: number | null) {
+    if (index === null) {
+      this.#focusedMember = null;
+    } else {
+      this.#focusedMember = this.#sims.at(index) ?? null;
+      if (!this.#focusedMember) {
+        console.warn(`No member found at index: ${index}`);
+      }
     }
   }
 
@@ -50,12 +54,8 @@ export class GroupInterview {
         this.#abortController = new AbortController();
       } else {
         const recognizedText = typedEvent.detail.recognized.text;
-        console.log(recognizedText);
-        if (!this.#focusedMember) throw new Error("Focused member is not set");
-
-        console.log(this.#transcript);
         this.#interactionRequest$.next({
-          sim: this.#focusedMember!,
+          focusedSim: this.#focusedMember,
           speech: recognizedText,
         });
       }
@@ -70,12 +70,13 @@ export class GroupInterview {
         that.#transcript = [...that.#transcript, { speaker: props.name, text: props.utterance }];
         console.log(`${props.name}: ${props.utterance}`);
       });
+      return `${props.name} spoke: ${props.utterance}`;
     }
 
     this.#interactionRequest$
       .pipe(
         switchMap(async (req) => {
-          const userSpeech = `(asking ${req.sim.name}) ${req.speech}`;
+          const userSpeech = `${req.focusedSim ? `(asking ${req.focusedSim.name}) ` : ""}${req.speech}`;
 
           aoai?.beta.chat.completions.runTools(
             {
@@ -85,8 +86,8 @@ ${this.#sims.map((sim) => `- ${sim.name}: ${sim.background}`).join("\n")}
 
 ${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.map((t) => `${t.speaker}: ${t.text}`).join("\n")}` : ""}
 
-Now, simulate a group interview between the audience members and the host. Speak as members of the audience. At the end of the turn, either pass it to the next speaker or stop when the conversation reaches is specifically address to one person or reaches a natural end. If the question is unclear, pass it back to the host. 
-Keep it natural with up to three turns, one sentence one speaker each turn.
+Now, simulate a group interview between the audience members and the host. Speak as members of the audience turn by turn. If the question is unclear, pass it back to the host. 
+Take turns naturally but do not exceed three turns. One sentence one speaker per turn.
               `,
                 user`${userSpeech}`,
               ],
