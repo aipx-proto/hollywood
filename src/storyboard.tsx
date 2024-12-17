@@ -5,11 +5,11 @@ import { tap } from "rxjs";
 import { Avartar } from "./components/avatar-element";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
-import type { AzureDalleNode } from "./lib/ai-bar/lib/elements/image-gen-node";
 import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { parseJsonStream } from "./lib/json-stream";
 import { system, user } from "./lib/message";
+import { useGenerateImage } from "./prompt/generate-image";
 import { useGenerateStory } from "./prompt/generate-story";
 import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
 import { useInviteAudience } from "./prompt/invite-audience";
@@ -76,33 +76,7 @@ function App() {
   const { inviteAudience } = useInviteAudience({ state, setState, patchState });
   const { generateStory } = useGenerateStory({ state, setState });
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
-
-  const handleVisualize = async (i: number) => {
-    const azureDalleNode = document.querySelector<AzureDalleNode>("azure-dalle-node");
-    if (!azureDalleNode) return;
-
-    // show placeholder
-    setState((prev) => ({
-      ...prev,
-      frames: prev.frames.map((scene, j) =>
-        j === i ? { ...scene, image: "https://placehold.co/1080?text=Sketching..." } : scene,
-      ),
-    }));
-
-    const img = await azureDalleNode.generateImage({
-      prompt:
-        state.frames[i].visualSnapshot +
-        ` Sketch in graphic novel illustration style, two-tone cross-hatch shading, well-defined outlines. Use large color blocks of earth-tone color.`,
-      style: "vivid",
-    });
-
-    const altPrompt = ` Sketch in architecture drawing style, two-tone hatch shading, well-defined outlines. Use large color blocks of earth-tone color.`;
-
-    setState((prev) => ({
-      ...prev,
-      frames: prev.frames.map((scene, j) => (j === i ? { ...scene, image: img.data.at(0)?.url } : scene)),
-    }));
-  };
+  const { generateImage } = useGenerateImage({ state, setState });
 
   const handleReact = async (i: number) => {
     const aoai = llmNode?.getClient();
@@ -404,7 +378,7 @@ ${state.audienceSims
             <div key={i} className="scene-card">
               <b>{scene.title}</b>
               <p>{scene.story}</p>
-              <button onClick={() => handleVisualize(i)}>Visualize</button>
+              <button onClick={() => generateImage(i)}>Visualize</button>
               <button onClick={() => handleReact(i)}>Screen</button>
               {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
               {state.audienceSims
@@ -417,24 +391,6 @@ ${state.audienceSims
             </div>
           ))}
         </div>
-
-        <h2>Feedback</h2>
-        {state.audienceSims.map((sim, i) => (
-          <div key={i} className="audience-sim">
-            <b>{sim.name}</b>
-            <details>
-              <span>{sim.background}</span>
-              {sim.reactions.map((reaction, j) => (
-                <div key={j} className="reaction">
-                  <b>Scene {j + 1}</b>
-                  <span>{reaction}</span>
-                </div>
-              ))}
-            </details>
-            <button onClick={() => handleGetFeedback(i)}>Hear feedback</button>
-            <div>{sim.feedback}</div>
-          </div>
-        ))}
       </aside>
       <main className="main-layout">
         <div className="screens">
@@ -464,12 +420,23 @@ ${state.audienceSims
               <h2>{state.frames.find((scene) => scene.isShowing)?.title}</h2>
               <p>{state.frames.find((scene) => scene.isShowing)?.story}</p>
               <p>{state.frames.find((scene) => scene.isShowing)?.visualSnapshot}</p>
-              <button title="visualize" onClick={() => handleVisualize(state.frames.findIndex((s) => s.isShowing))}>
+              <button title="visualize" onClick={() => generateImage(state.frames.findIndex((s) => s.isShowing))}>
                 Visualize
               </button>
+              <button onClick={() => handleReact(state.frames.findIndex((s) => s.isShowing))}>Screen</button>
             </div>
           ) : null}
+
+          {state.audienceSims
+            .map((sim) => sim.reactions.at(state.frames.findIndex((s) => s.isShowing)))
+            .filter(Boolean)
+            .map((reaction, i) => (
+              <div key={i} className="audience-sim">
+                <b>{state.audienceSims[i].name}</b>: <span>{reaction}</span>
+              </div>
+            ))}
         </div>
+
         <div className="audience-layer">
           {state.audienceSims.map((sim, i) => (
             <Avartar key={i} alt={sim.name} title={`${sim.name}\n${sim.background}`} />

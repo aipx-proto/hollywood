@@ -31,7 +31,7 @@ export function useGenerateStoryboardFrames(props: UseGenerateStoryboardFramesPr
 For each frame, provide a title, and story description, and a visual snapshot. 
 The story should be the narrative behind the frame. Do your best storytelling.
 The visual snapshot is the decisive moment of the frame. Objectively describe the foreground, background, lighting, composition, camera angle and other visual design.
-In visual snapshot, DO NOT mention character names. Describing gender, ethnicity, facial expression, body posture instead. Be objective. DO NOT mention art styles. 
+In visual snapshot, DO NOT mention character names. Describe specific gender (either he or she), ethnicity, facial expression, body posture instead. Be objective. DO NOT mention art styles. 
 
 Respond in this JSON foramt;
 
