@@ -57,9 +57,11 @@ export class AIBar extends HTMLElement {
     });
 
     if (this.hasAttribute("auto-hide")) {
-      setTimeout(() => {
+      const cancel = setTimeout(() => {
         this.style.display = "none";
       }, 3000);
+
+      this.addEventListener("click", () => clearTimeout(cancel));
     }
 
     if (this.hasAttribute("hidden")) {
