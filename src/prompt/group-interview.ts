@@ -1,11 +1,13 @@
 import { Subject, switchMap } from "rxjs";
 import type { AzureSttNode } from "../lib/ai-bar/lib/elements/azure-stt-node";
+import type { AzureTtsNode } from "../lib/ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
 import type { AIBarEventDetail } from "../lib/ai-bar/lib/events";
 import { system, user } from "../lib/message";
 import type { AudienceSim } from "../storyboard";
 
 const azureStt = document.querySelector<AzureSttNode>("azure-stt-node")!;
+const azureTts = document.querySelector<AzureTtsNode>("azure-tts-node")!;
 const llmNode = document.querySelector<LlmNode>("llm-node");
 
 interface TranscriptEntry {
@@ -32,6 +34,7 @@ export class GroupInterview {
 
   start() {
     azureStt.startMicrophone();
+    azureTts.startSpeaker();
 
     // intercept speech event
     azureStt.addEventListener("event", (event) => {
@@ -59,8 +62,10 @@ export class GroupInterview {
     const that = this;
 
     function speakAs(props: { name: string; utterance: string }) {
-      console.log("speaking as", props);
-      that.#transcript = [...that.#transcript, { speaker: props.name, text: props.utterance }];
+      azureTts.queue(props.utterance).then(() => {
+        that.#transcript = [...that.#transcript, { speaker: props.name, text: props.utterance }];
+        console.log(`${props.name}: ${props.utterance}`);
+      });
     }
 
     this.#interactionRequest$
@@ -73,9 +78,10 @@ export class GroupInterview {
               system`You are simulating a commerical movie test screening event. The audience consists of the following people:
 ${this.#sims.map((sim) => `- ${sim.name}: ${sim.background}`).join("\n")}
 
-${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.map((t) => `- ${t.speaker}: ${t.text}`).join("\n")}` : ""}
+${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.map((t) => `${t.speaker}: ${t.text}`).join("\n")}` : ""}
 
-Now, simulate a group interview between the audience members and the host. You can speak as a member of the audience. Stop when the conversation reaches a natural end or is passed back to the host. Do not exceed 3 turns.
+Now, simulate a group interview between the audience members and the host. Speak as members of the audience. At the end of the turn, either pass it to the next speaker or stop when the conversation reaches is specifically address to one person or reaches a natural end. If the question is unclear, pass it back to the host. 
+Keep it natural with up to three turns, one sentence one speaker each turn.
               `,
               user`${userSpeech}`,
             ],
