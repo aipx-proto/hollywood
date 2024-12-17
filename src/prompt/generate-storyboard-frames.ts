@@ -30,8 +30,8 @@ export function useGenerateStoryboardFrames(props: UseGenerateStoryboardFramesPr
             `You are a Holywood storyboard artist. Create storyboard frames for the provided story. You have the freedom to consolidate, split, and reorder scenes into few key frames in a storyboard. Make sure the last frame concludes the story within the narrative.
 For each frame, provide a title, and story description, and a visual snapshot. 
 The story should be the narrative behind the frame. Do your best storytelling.
-The visual snapshot is the decisive moment of the frame. Objectively describe the foreground, background, lighting, composition, camera angle and other visual design.
-When there are characters in the visual snapshot, DO NOT mention character names. Describe specific gender (either he or she), age, ethnicity, facial expression, hair, body posture, and clothing instead. Be objective. DO NOT mention art styles. 
+The visual snapshot is the decisive moment of the frame. Objectively describe the foreground, background, lighting, composition, camera angle and other visual design. Focus on the subject and scene. DO NOT mention art styles. 
+Whenever there are characters in the visual snapshot, describe specific gender (either he or she), age (estimate to X years old), ethnicity, facial expression, hair color and style, body type and posture, and clothing instead. DO NOT mention character names.
 
 Respond in this JSON foramt;
 

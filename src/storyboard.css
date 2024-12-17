@@ -84,6 +84,12 @@ body {
   grid-template-columns: 1fr 0px;
   height: 100vh;
 
+  &[data-has-scenes="false"] {
+    > :last-child {
+      display: none;
+    }
+  }
+
   &[data-has-scenes="true"] {
     grid-template-columns: auto 1fr;
 
