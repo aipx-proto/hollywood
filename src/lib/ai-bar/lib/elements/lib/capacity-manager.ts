@@ -1,9 +1,10 @@
 export class CapacityManager {
+  #capacity: number;
+
   constructor(config: { capacity: number }) {
     this.#capacity = config.capacity;
   }
 
-  #capacity = 3;
   events = new EventTarget();
 
   async consumeCapacity(): Promise<void> {

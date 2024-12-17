@@ -97,6 +97,8 @@ function App() {
     });
   }, [state.frames]);
 
+  // automatically generate emoji reactions when a scene is added
+
   // synchronize state with group interview
   useEffect(() => {
     groupInterview.setGroupMembers(state.audienceSims);

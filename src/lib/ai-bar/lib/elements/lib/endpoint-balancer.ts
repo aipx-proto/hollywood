@@ -12,7 +12,13 @@ export class EndpointLoadBalancer {
     // make sure each endpoint has a capacity manager
     connections.forEach((connection) => {
       if (!this.capacityManagerMaps.has(connection.endpoint)) {
-        this.capacityManagerMaps.set(connection.endpoint, new CapacityManager({ capacity: 3 }));
+        let capacity = 3;
+
+        if (connection.endpoint.includes("chusun")) {
+          capacity = 6;
+        }
+
+        this.capacityManagerMaps.set(connection.endpoint, new CapacityManager({ capacity: 6 }));
       }
     });
 
