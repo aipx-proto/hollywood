@@ -6,12 +6,12 @@ import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
 import type { AIBar } from "./lib/ai-bar/lib/ai-bar";
 import { loadAIBar } from "./lib/ai-bar/loader";
+import { useGenerateAudience } from "./prompt/generate-audience";
 import { useGenerateImage } from "./prompt/generate-image";
 import { useGenerateReaction } from "./prompt/generate-reaction";
 import { useGenerateStory } from "./prompt/generate-story";
 import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
 import { GroupInterview } from "./prompt/group-interview";
-import { useGenerateAudience } from "./prompt/invite-audience";
 import "./storyboard.css";
 
 loadAIBar();
