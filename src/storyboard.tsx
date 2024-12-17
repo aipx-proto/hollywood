@@ -82,27 +82,6 @@ function App() {
           onChange={(e) => setState((prev) => ({ ...prev, goal: e.target.value }))}
         ></textarea>
 
-        <h2>Invite audience</h2>
-        <input name="audienceCount" type="number" min={1} max={5} defaultValue={3} />
-        <textarea
-          value={state.targetAudience}
-          onChange={(e) => setState((prev) => ({ ...prev, targetAudience: e.target.value }))}
-        ></textarea>
-        <button
-          onClick={() =>
-            inviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber)
-          }
-        >
-          Invite
-        </button>
-        <div>
-          {state.audienceSims.map((sim, i) => (
-            <div key={i} className="audience-sim">
-              <b>{sim.name}</b> <span>{sim.background}</span>
-            </div>
-          ))}
-        </div>
-
         <h2>Narrative</h2>
         <div className="narrative-board">
           {state.narratives.map((n) => (
@@ -179,19 +158,43 @@ function App() {
           </div>
         ))}
 
-        <h2>Cinematography</h2>
+        <h2>Premiere</h2>
+        <label>Audience size</label>
+        <input name="audienceCount" type="number" min={1} max={5} defaultValue={3} />
+        <label>Audience description</label>
+        <textarea
+          value={state.targetAudience}
+          onChange={(e) => setState((prev) => ({ ...prev, targetAudience: e.target.value }))}
+        ></textarea>
+        <button
+          onClick={() => {
+            inviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber);
+            generateStoryboardFrames();
+          }}
+        >
+          Invite
+        </button>
         <div>
-          <button onClick={generateStoryboardFrames}>Generate</button>
+          {state.audienceSims.map((sim, i) => (
+            <div key={i} className="audience-sim">
+              <b>{sim.name}</b> <span>{sim.background}</span>
+            </div>
+          ))}
         </div>
       </aside>
       <main className="main-layout">
         <div className="screens">
           {state.frames.find((scene) => scene.isShowing)?.image ? (
-            <img src={state.frames.find((scene) => scene.isShowing)!.image} alt="screen" />
+            <img
+              src={state.frames.find((scene) => scene.isShowing)!.image}
+              alt={state.frames.find((scene) => scene.isShowing)?.visualSnapshot}
+              title={state.frames.find((scene) => scene.isShowing)?.visualSnapshot}
+            />
           ) : (
             <img src="https://placehold.co/720?text=Screen" alt="screen" />
           )}
-          <div>
+
+          <div className="slide-control">
             {state.frames.map((scene, i) => (
               <button
                 key={i}
@@ -203,21 +206,24 @@ function App() {
                   }))
                 }
               >
-                {i}
+                {i + 1}
               </button>
             ))}
           </div>
           {state.frames.find((scene) => scene.isShowing) ? (
             <div>
-              <h2>{state.frames.find((scene) => scene.isShowing)?.title}</h2>
-              <p>{state.frames.find((scene) => scene.isShowing)?.story}</p>
-              <p>{state.frames.find((scene) => scene.isShowing)?.visualSnapshot}</p>
-              <button title="visualize" onClick={() => generateImage(state.frames.findIndex((s) => s.isShowing))}>
-                Visualize
-              </button>
-              <button onClick={() => generateReaction(state.frames.findIndex((s) => s.isShowing))}>
-                Get reactions
-              </button>
+              <div className="story-card">
+                <h2>{state.frames.find((scene) => scene.isShowing)?.title}</h2>
+                <p>{state.frames.find((scene) => scene.isShowing)?.story}</p>
+                <div>
+                  <button title="visualize" onClick={() => generateImage(state.frames.findIndex((s) => s.isShowing))}>
+                    Visualize
+                  </button>
+                  <button onClick={() => generateReaction(state.frames.findIndex((s) => s.isShowing))}>
+                    Get reactions
+                  </button>
+                </div>
+              </div>
             </div>
           ) : null}
 

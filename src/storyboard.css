@@ -77,10 +77,12 @@ body {
 
 .app-layout {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr 0px;
   height: 100vh;
 
   &[data-has-scenes="true"] {
+    grid-template-columns: auto 1fr;
+
     > :first-child {
       width: 400px;
       resize: horizontal;
@@ -92,6 +94,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  margin: auto;
 
   img {
     width: 120px;
@@ -158,6 +161,24 @@ body {
     max-width: 40rem;
     width: 100%;
     margin: auto;
+  }
+}
+
+.story-card {
+  max-width: 40rem;
+  margin: auto;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.slide-control {
+  max-width: 40rem;
+  display: flex;
+  flex-wrap: wrap;
+  margin: auto;
+
+  button {
+    min-width: 4rem;
   }
 }
 
