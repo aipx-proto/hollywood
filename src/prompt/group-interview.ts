@@ -121,7 +121,7 @@ export class GroupInterview {
 
     function reactWithEmoji(props: { name: string; emoji: string; intensity: number }) {
       generateEmojiGroup({
-        targetElement: document.querySelector(`[data-voice][data-name="${props.name}"]`)!,
+        targetElement: document.querySelector<HTMLElement>(`[data-voice][data-name="${props.name}"]`)!,
         emojisPerSecond: props.intensity * 1,
         durationSeconds: 2 + Math.random() * 2,
         delaySeconds: Math.random(),

@@ -33,7 +33,7 @@ export const Avartar: React.FC<AvatarProps> = (props) => {
 };
 
 export async function generateEmojiGroup(options: {
-  targetElement: HTMLElement;
+  targetElement?: HTMLElement;
   emojisPerSecond: number;
   durationSeconds: number;
   delaySeconds: number;
@@ -49,7 +49,7 @@ export async function generateEmojiGroup(options: {
   for (let i = 0; i < totalEmojis; i++) {
     setTimeout(
       () => {
-        generateEmoji(targetElement, emoji);
+        generateEmoji(targetElement ?? document.body, emoji);
       },
       Math.random() * durationSeconds * 1000,
     );
