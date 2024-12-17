@@ -10,6 +10,11 @@ export interface SpeechRequest {
   voice?: string;
 }
 
+export interface StateChangeEventDetail {
+  voice?: string;
+  isOn: boolean;
+}
+
 export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
   private sentenceQueue = createSentenceQueue();
   private audioSink = new CustomOutputStream();
@@ -48,10 +53,20 @@ export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
 
         this.audioSink.appendBuffer(data.audio, {
           onPlayStart: () => {
-            console.log(`[azure-tts:speaking] ${data.block}`);
+            console.log(`[azure-tts:speaking] ${data.block.text}`);
+            this.dispatchEvent(
+              new CustomEvent<StateChangeEventDetail>("statechange", {
+                detail: { voice: data.block.options?.voice, isOn: true },
+              }),
+            );
           },
           onPlayEnd: () => {
-            console.log(`[azure-tts:spoken] ${data.block}`);
+            console.log(`[azure-tts:spoken] ${data.block.text}`);
+            this.dispatchEvent(
+              new CustomEvent<StateChangeEventDetail>("statechange", {
+                detail: { voice: data.block.options?.voice, isOn: false },
+              }),
+            );
             if (this.finishCallbacks.has(data.block.text)) {
               this.finishCallbacks.get(data.block.text)?.();
               this.finishCallbacks.delete(data.block.text);

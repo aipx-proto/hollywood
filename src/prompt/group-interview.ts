@@ -1,7 +1,7 @@
 import { Subject, switchMap } from "rxjs";
 import { personas } from "../components/avatar-element";
 import type { AzureSttNode } from "../lib/ai-bar/lib/elements/azure-stt-node";
-import type { AzureTtsNode } from "../lib/ai-bar/lib/elements/azure-tts-node";
+import type { AzureTtsNode, StateChangeEventDetail } from "../lib/ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
 import type { AIBarEventDetail } from "../lib/ai-bar/lib/events";
 import { system, user } from "../lib/message";
@@ -65,6 +65,15 @@ export class GroupInterview {
     azureStt.startMicrophone();
     azureTts.startSpeaker();
 
+    azureTts.addEventListener("statechange", (event) => {
+      const { voice, isOn: state } = (event as CustomEvent<StateChangeEventDetail>).detail;
+      if (!voice) {
+        this.#updateSpeakerStatus("", false);
+      } else {
+        this.#updateSpeakerStatus(voice, state);
+      }
+    });
+
     // intercept speech event
     azureStt.addEventListener("event", (event) => {
       const typedEvent = event as CustomEvent<AIBarEventDetail>;
@@ -76,6 +85,7 @@ export class GroupInterview {
         azureTts.clear();
         this.#abortController.abort();
         this.#abortController = new AbortController();
+        this.#updateSpeakerStatus("", false);
       } else {
         const recognizedText = typedEvent.detail.recognized.text;
         this.#interactionRequest$.next({
@@ -155,5 +165,11 @@ You MUST only use the speakAs tool to respond. In the end, do not respond with a
         }),
       )
       .subscribe();
+  }
+
+  #updateSpeakerStatus(name: string, isOn: boolean) {
+    document.querySelectorAll(`[data-voice]`).forEach((el) => {
+      el.toggleAttribute("data-speaking", isOn ? el.getAttribute("data-voice") === name : false);
+    });
   }
 }

@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Avartar } from "./components/avatar-element";
+import { Avartar, personas } from "./components/avatar-element";
 import { generateMockStory } from "./data/mock-story";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
@@ -272,8 +272,14 @@ function App() {
 
         <div className="audience-layer">
           {state.audienceSims.map((sim, i) => (
-            <button key={i} onMouseDown={() => handleAvatarPress(i)} onMouseUp={() => handleAvatarRelease()}>
+            <button
+              key={i}
+              data-voice={personas.find((p) => p.name === sim.name)?.voiceId ?? ""}
+              onMouseDown={() => handleAvatarPress(i)}
+              onMouseUp={() => handleAvatarRelease()}
+            >
               <Avartar alt={sim.name} title={`${sim.name}\n${sim.background}`} />
+              <span className="name">{sim.name}</span>
             </button>
           ))}
           <button onMouseDown={() => handleAvatarPress(null)} onMouseUp={() => handleAvatarRelease()}>

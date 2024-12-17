@@ -22,6 +22,10 @@ svg {
   max-width: 100%;
 }
 
+button {
+  cursor: pointer;
+}
+
 input,
 button,
 textarea,
@@ -98,12 +102,58 @@ body {
   margin: auto;
 
   img {
-    width: 120px;
+    width: 160px;
+  }
+
+  button[data-voice] {
+    border-radius: 100%;
+    border: none;
+    overflow: hidden;
+    transition: all 0.1s ease-in-out;
+    position: relative;
+
+    &:active {
+      transform: scale(1.05);
+      filter: brightness(1.1);
+    }
+
+    .name {
+      position: absolute;
+      display: block;
+
+      /* inset: 0;
+      margin: auto; */
+      font-size: 1rem;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 0.3rem 0 0.5rem 0;
+      text-align: center;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.8);
+    }
+  }
+
+  button[data-voice][data-speaking] {
+    /** add glowing neon blue outline pulsing animation*/
+    animation: boxshadowpulse 1s infinite;
   }
 
   button:last-child {
     min-height: 40px;
     flex: 1 0 100%;
+  }
+}
+
+@keyframes boxshadowpulse {
+  0% {
+    box-shadow: 0 0 2px 4px rgba(0, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 4px 8px rgba(0, 255, 255, 1);
+  }
+  100% {
+    box-shadow: 0 0 2px 4px rgba(0, 255, 255, 0.5);
   }
 }
 

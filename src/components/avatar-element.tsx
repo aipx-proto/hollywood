@@ -29,5 +29,5 @@ export const Avartar: React.FC<AvatarProps> = (props) => {
     console.warn(`Avatar alt "${alt}" is not recognized`);
   }
 
-  return <img src={`https://api.dicebear.com/9.x/micah/svg?seed=${props.alt}`} {...rest} />;
+  return <img src={`https://api.dicebear.com/9.x/micah/svg?seed=${props.alt}`} draggable={false} {...rest} />;
 };
