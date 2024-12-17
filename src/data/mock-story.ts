@@ -74,20 +74,20 @@ export function generateMockStory(): Partial<AppState> {
     targetAudience: "Outdoor activity enthusiasts who live in the Pacific Northwest",
     audienceSims: [
       {
-        name: "John",
+        name: "Leah",
         background: "A regular customer who loves coffee and is always looking for new places to try.",
         reactions: [],
         feedback: "",
       },
       {
-        name: "Jane",
+        name: "Jude",
         background:
           "A barista who has been working at the coffee shop for many years and is known for her positive attitude.",
         reactions: [],
         feedback: "",
       },
       {
-        name: "Jim",
+        name: "Sadie",
         background:
           "A manager who has been working at the coffee shop for many years and is known for her tough love approach.",
         reactions: [],

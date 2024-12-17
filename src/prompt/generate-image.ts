@@ -19,7 +19,12 @@ export function useGenerateImage(props: UseGenerateImageProps) {
       setState((prev) => ({
         ...prev,
         frames: prev.frames.map((scene, j) =>
-          j === i ? { ...scene, image: "https://placehold.co/1080?text=Sketching..." } : scene,
+          j === i
+            ? {
+                ...scene,
+                image: `https://placehold.co/1080?text=${encodeURIComponent(scene.title + "\nsketching...")}`,
+              }
+            : scene,
         ),
       }));
 
