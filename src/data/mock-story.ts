@@ -1,3 +1,4 @@
+import { allowedNames } from "../components/avatar-element";
 import type { AppState } from "../storyboard";
 import { narratives } from "./narratives";
 import { techniques } from "./techniques";
@@ -37,7 +38,6 @@ export function generateMockStory(): Partial<AppState> {
           "The barista is struggling to keep up with the demands of the busy coffee shop while trying to maintain a positive attitude.",
         visualSnapshot: "A barista is rushing around the coffee shop, trying to keep up with the orders.",
         image: "https://placehold.co/720?text=The+Barista%27s+Struggle",
-        isShowing: true,
       },
       {
         title: "The Manager's Advice",
@@ -74,20 +74,20 @@ export function generateMockStory(): Partial<AppState> {
     targetAudience: "Outdoor activity enthusiasts who live in the Pacific Northwest",
     audienceSims: [
       {
-        name: "Leah",
+        name: allowedNames[0],
         background: "A regular customer who loves coffee and is always looking for new places to try.",
         reactions: [],
         feedback: "",
       },
       {
-        name: "Jude",
+        name: allowedNames[1],
         background:
           "A barista who has been working at the coffee shop for many years and is known for her positive attitude.",
         reactions: [],
         feedback: "",
       },
       {
-        name: "Sadie",
+        name: allowedNames[2],
         background:
           "A manager who has been working at the coffee shop for many years and is known for her tough love approach.",
         reactions: [],

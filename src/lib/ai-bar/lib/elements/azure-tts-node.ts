@@ -6,6 +6,10 @@ export function defineAzureTtsNode(tagName = "azure-tts-node") {
   customElements.define(tagName, AzureTtsNode);
 }
 
+export interface SpeechRequest {
+  voice?: string;
+}
+
 export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
   private sentenceQueue = createSentenceQueue();
   private audioSink = new CustomOutputStream();
@@ -22,33 +26,39 @@ export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
         filter((block) => !!block),
         concatMap(async (block) => {
           const connection = this.closest<AIBar>("ai-bar")?.getAzureConnection();
-          if (!connection) throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
+          if (!connection)
+            throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
 
           const result = await synthesizeSpeech({
             apiKey: connection.speechKey,
             region: connection.speechRegion,
-            text: block,
-            voice: this.getAttribute("voice") ?? undefined,
+            text: block.text,
+            voice: block.options?.voice ?? this.getAttribute("voice") ?? undefined,
             rate: this.getAttribute("rate") ?? undefined,
-          });
+          }).catch(() => null);
 
-          return { text: block, audio: result };
-        })
+          return { block, audio: result };
+        }),
       )
-      .subscribe((data) =>
+      .subscribe((data) => {
+        if (data.audio === null) {
+          console.warn(`speech synthesis error ${data.block.text}`);
+          return;
+        }
+
         this.audioSink.appendBuffer(data.audio, {
           onPlayStart: () => {
-            console.log(`[azure-tts:speaking] ${data.text}`);
+            console.log(`[azure-tts:speaking] ${data.block}`);
           },
           onPlayEnd: () => {
-            console.log(`[azure-tts:spoken] ${data.text}`);
-            if (this.finishCallbacks.has(data.text)) {
-              this.finishCallbacks.get(data.text)?.();
-              this.finishCallbacks.delete(data.text);
+            console.log(`[azure-tts:spoken] ${data.block}`);
+            if (this.finishCallbacks.has(data.block.text)) {
+              this.finishCallbacks.get(data.block.text)?.();
+              this.finishCallbacks.delete(data.block.text);
             }
           },
-        })
-      );
+        });
+      });
   }
 
   disconnectedCallback() {
@@ -59,7 +69,7 @@ export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
     this.audioSink.start();
   }
 
-  async queue(text: string) {
+  async queue(text: string, options?: SpeechRequest) {
     const deferred = Promise.withResolvers<void>();
 
     console.log(`[azure-tts:enqueue] ${text}`);
@@ -69,7 +79,7 @@ export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
     }
 
     this.finishCallbacks.set(text, deferred.resolve);
-    this.sentenceQueue.enqueue(text);
+    this.sentenceQueue.enqueue(text, options);
 
     return deferred.promise;
   }
@@ -82,16 +92,16 @@ export class AzureTtsNode extends HTMLElement implements TextToSpeechProvider {
 }
 
 function createSentenceQueue() {
-  const sentence$ = new Subject<string>();
+  const sentence$ = new Subject<{ text: string; options?: SpeechRequest }>();
 
-  function enqueue(text: string) {
+  function enqueue(text: string, options?: SpeechRequest) {
     if (text.trim()) {
-      sentence$.next(text);
+      sentence$.next({ text, options });
     }
   }
 
   return {
-    sentenceQueue: sentence$ as Observable<string>,
+    sentenceQueue: sentence$ as Observable<{ text: string; options?: SpeechRequest }>,
     enqueue,
   };
 }

@@ -1,4 +1,5 @@
 import { Subject, switchMap } from "rxjs";
+import { personas } from "../components/avatar-element";
 import type { AzureSttNode } from "../lib/ai-bar/lib/elements/azure-stt-node";
 import type { AzureTtsNode } from "../lib/ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
@@ -89,10 +90,14 @@ export class GroupInterview {
     const that = this;
 
     function speakAs(props: { name: string; utterance: string }) {
-      azureTts.queue(props.utterance).then(() => {
-        that.#transcript = [...that.#transcript, { speaker: props.name, text: props.utterance }];
-        console.log(`${props.name}: ${props.utterance}`);
-      });
+      azureTts
+        .queue(props.utterance, {
+          voice: personas.find((p) => p.name === props.name)?.voiceId,
+        })
+        .then(() => {
+          that.#transcript = [...that.#transcript, { speaker: props.name, text: props.utterance }];
+          console.log(`${props.name}: ${props.utterance}`);
+        });
       return `${props.name} spoke: ${props.utterance}`;
     }
 
