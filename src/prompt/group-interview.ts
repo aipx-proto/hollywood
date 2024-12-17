@@ -20,6 +20,7 @@ export class GroupInterview {
   #sims: AudienceSim[] = [];
   #focusedMember: AudienceSim | null = null;
   #interactionRequest$ = new Subject<{ sim: AudienceSim; speech: string }>();
+  #abortController = new AbortController();
 
   setGroupMembers(sims: AudienceSim[]) {
     this.#sims = sims;
@@ -44,6 +45,9 @@ export class GroupInterview {
 
       if (!typedEvent.detail.recognized.text) {
         // TODO just interrupt
+        azureTts.clear();
+        this.#abortController.abort();
+        this.#abortController = new AbortController();
       } else {
         const recognizedText = typedEvent.detail.recognized.text;
         console.log(recognizedText);
@@ -73,9 +77,10 @@ export class GroupInterview {
         switchMap(async (req) => {
           const userSpeech = `(asking ${req.sim.name}) ${req.speech}`;
 
-          aoai?.beta.chat.completions.runTools({
-            messages: [
-              system`You are simulating a commerical movie test screening event. The audience consists of the following people:
+          aoai?.beta.chat.completions.runTools(
+            {
+              messages: [
+                system`You are simulating a commerical movie test screening event. The audience consists of the following people:
 ${this.#sims.map((sim) => `- ${sim.name}: ${sim.background}`).join("\n")}
 
 ${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.map((t) => `${t.speaker}: ${t.text}`).join("\n")}` : ""}
@@ -83,34 +88,38 @@ ${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.
 Now, simulate a group interview between the audience members and the host. Speak as members of the audience. At the end of the turn, either pass it to the next speaker or stop when the conversation reaches is specifically address to one person or reaches a natural end. If the question is unclear, pass it back to the host. 
 Keep it natural with up to three turns, one sentence one speaker each turn.
               `,
-              user`${userSpeech}`,
-            ],
-            model: "gpt-4o",
-            tools: [
-              {
-                type: "function",
-                function: {
-                  function: speakAs,
-                  description: "Speak as one of the characters",
-                  parse: JSON.parse,
-                  parameters: {
-                    type: "object",
-                    required: ["name", "utterance"],
-                    properties: {
-                      name: {
-                        type: "string",
-                        description: "Name of the character",
-                      },
-                      utterance: {
-                        type: "string",
-                        description: "Utterance by the character",
+                user`${userSpeech}`,
+              ],
+              model: "gpt-4o",
+              tools: [
+                {
+                  type: "function",
+                  function: {
+                    function: speakAs,
+                    description: "Speak as one of the characters",
+                    parse: JSON.parse,
+                    parameters: {
+                      type: "object",
+                      required: ["name", "utterance"],
+                      properties: {
+                        name: {
+                          type: "string",
+                          description: "Name of the character",
+                        },
+                        utterance: {
+                          type: "string",
+                          description: "Utterance by the character",
+                        },
                       },
                     },
                   },
                 },
-              },
-            ],
-          });
+              ],
+            },
+            {
+              signal: this.#abortController.signal,
+            },
+          );
 
           this.#transcript = [...this.#transcript, { speaker: `host`, text: userSpeech }];
         }),
