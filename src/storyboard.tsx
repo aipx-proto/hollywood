@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Avartar, personas } from "./components/avatar-element";
+import { Avartar, generateEmoji, personas } from "./components/avatar-element";
 import { generateMockStory } from "./data/mock-story";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
@@ -127,7 +127,12 @@ function App() {
   return (
     <div className="app-layout" data-has-scenes={state.frames.length > 0}>
       <aside className="control-panel">
-        <button onClick={enterDebugMode}>Debug mode</button>
+        <div>
+          <button onClick={() => generateEmoji(document.querySelector(`[data-emoji="a"]`) as HTMLElement)}>
+            Debug emoji
+          </button>
+          <button onClick={enterDebugMode}>Debug screening</button>
+        </div>
         <h2>Goal</h2>
         <textarea
           value={state.goal}
@@ -296,6 +301,7 @@ function App() {
           {state.audienceSims.map((sim, i) => (
             <button
               key={i}
+              data-emoji="a"
               data-voice={personas.find((p) => p.name === sim.name)?.voiceId ?? ""}
               onMouseDown={() => handleAvatarPress(i)}
               onMouseUp={() => handleAvatarRelease()}

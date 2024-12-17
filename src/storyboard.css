@@ -104,7 +104,7 @@ body {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 2rem 1rem;
   margin: auto;
 
   img {
@@ -114,9 +114,10 @@ body {
   button[data-voice] {
     border-radius: 100%;
     border: none;
-    overflow: hidden;
+    /* overflow: clip; */
     transition: all 0.1s ease-in-out;
     position: relative;
+    background: none;
 
     &:active {
       transform: scale(1.05);
@@ -132,11 +133,16 @@ body {
       font-size: 1rem;
       left: 0;
       right: 0;
-      bottom: 0;
-      padding: 0.3rem 0 0.5rem 0;
+      padding: 0.2rem 0;
       text-align: center;
       font-weight: 600;
-      background: rgba(0, 0, 0, 0.8);
+      width: 6rem;
+      margin: auto;
+      bottom: -1rem;
+      color: black;
+      border-radius: 40px;
+      border: 2px solid black;
+      background: white;
     }
   }
 
@@ -178,6 +184,21 @@ body {
 .character-grid {
   display: grid;
   gap: 0.5rem;
+}
+
+.emoji-float {
+  animation: float-up 1s ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-20vh);
+    opacity: 0;
+  }
 }
 
 .main-layout {
