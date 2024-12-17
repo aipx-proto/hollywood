@@ -1,21 +1,15 @@
-import type { ChatCompletionContentPart } from "openai/resources/index.mjs";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { tap } from "rxjs";
 import { Avartar } from "./components/avatar-element";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
-import type { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
-import { parseJsonStream } from "./lib/json-stream";
-import { system, user } from "./lib/message";
 import { useGenerateImage } from "./prompt/generate-image";
+import { useGenerateReaction } from "./prompt/generate-reaction";
 import { useGenerateStory } from "./prompt/generate-story";
 import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
 import { useInviteAudience } from "./prompt/invite-audience";
 import "./storyboard.css";
-
-const llmNode = document.querySelector<LlmNode>("llm-node");
 
 loadAIBar();
 
@@ -77,189 +71,7 @@ function App() {
   const { generateStory } = useGenerateStory({ state, setState });
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
   const { generateImage } = useGenerateImage({ state, setState });
-
-  const handleReact = async (i: number) => {
-    const aoai = llmNode?.getClient();
-    if (!aoai) return;
-
-    // for each audienceSim
-    state.audienceSims.map(async (sim) => {
-      const response = await aoai.chat.completions.create({
-        messages: [
-          system`You are invited to a commercial movie test screening event. Here is your profile:
-          
-Name: ${sim.name}
-Background: ${sim.background}
-
-The director will show you one scene at a time. Respond to the scene on screen with your reactions. Do not describe what you see. Instead, focus on your emotional reaction. You are encouraged to be critical.`,
-          // this sim's reaction to previous scenes
-          ...state.frames.slice(0, i).flatMap((scene, sceneNumber) => [
-            {
-              role: "user" as const,
-              content: [
-                {
-                  type: "text",
-                  text: scene.story,
-                } as ChatCompletionContentPart,
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: scene.image,
-                  },
-                } as ChatCompletionContentPart,
-              ],
-            },
-            {
-              role: "assistant" as const,
-              content: sim.reactions.at(sceneNumber),
-            },
-          ]),
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: state.frames[i].story,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: state.frames[i].image,
-                },
-              } as ChatCompletionContentPart,
-            ],
-          },
-        ],
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-      });
-
-      const reaction = response.choices[0]?.message.content;
-      if (!reaction) return;
-
-      setState((prev) => ({
-        ...prev,
-        audienceSims: prev.audienceSims.map((s) => {
-          if (s.name === sim.name) {
-            return {
-              ...s,
-              reactions: [...(s.reactions ?? []), reaction],
-            };
-          }
-          return s;
-        }),
-      }));
-    });
-  };
-
-  const handleGetFeedback = async (i: number) => {
-    const aoai = llmNode?.getClient();
-    if (!aoai) return;
-
-    const response = await aoai.chat.completions.create({
-      messages: [
-        system`You are invited to a commercial movie test screening event. Here is your profile:
-
-Name: ${state.audienceSims[i].name}
-Background: ${state.audienceSims[i].background}
-
-You already watched a commericial and provided your critical feedback:
-
-${state.audienceSims[i].reactions
-  .map(
-    (reaction, j) => `Scene ${j + 1}: ${state.frames[j].story}{
-Scene ${j + 1} reaction: ${reaction}`,
-  )
-  .join("\n")}
-`,
-        user`Please provide your critcial feedback on the commercial you watched. Also suggest improvement or alernative ideas to make it better`,
-      ],
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-    });
-
-    const feedback = response.choices[0]?.message.content;
-    if (!feedback) return;
-
-    setState((prev) => ({
-      ...prev,
-      audienceSims: prev.audienceSims.map((s, j) => {
-        if (i === j) {
-          return {
-            ...s,
-            feedback,
-          };
-        }
-        return s;
-      }),
-    }));
-  };
-
-  const handleRevise = async () => {
-    const aoai = llmNode?.getClient();
-    if (!aoai) return;
-
-    // clear the scenes
-    setState((prev) => ({ ...prev, frames: [] }));
-
-    // clear previous reactions and feedback
-    setState((prev) => ({
-      ...prev,
-      audienceSims: prev.audienceSims.map((sim) => ({ ...sim, reactions: [], feedback: "" })),
-    }));
-
-    const response = await aoai.chat.completions.create({
-      stream: true,
-      messages: [
-        system`Revise the following scenes of a commercial based on the critical feedback of the test audience. 
-        
-Current script:
-${state.frames
-  .map(
-    (scene, i) => `
-Scene ${i + 1}
-Title: ${scene.title}  
-Description: ${scene.story}
-`,
-  )
-  .join("\n")}
-
-Respond with revised scenes in this JSON format
-{
-  scenes: {
-    title: string; // title of the scene
-    description: string; // description of the scene
-  }[];
-}
-`,
-        user`Overall feedback:
-
-${state.audienceSims
-  .filter((sim) => sim.feedback)
-  .map((sim) => `${sim.name}: ${sim.feedback}`)
-  .join("\n")}`,
-      ],
-      response_format: {
-        type: "json_object",
-      },
-      model: "gpt-4o-mini",
-    });
-
-    parseJsonStream(response)
-      .pipe(
-        tap((v) => {
-          if (typeof v.key === "number") {
-            setState((prev) => {
-              return {
-                ...prev,
-                frames: [...prev.frames, v.value as any],
-              };
-            });
-          }
-        }),
-      )
-      .subscribe();
-  };
+  const { generateReaction } = useGenerateReaction({ state, setState });
 
   return (
     <div className="app-layout" data-has-scenes={state.frames.length > 0}>
@@ -370,26 +182,6 @@ ${state.audienceSims
         <h2>Cinematography</h2>
         <div>
           <button onClick={generateStoryboardFrames}>Generate</button>
-          <button onClick={handleRevise}>Revise</button>
-        </div>
-
-        <div className="scene-list">
-          {state.frames.map((scene, i) => (
-            <div key={i} className="scene-card">
-              <b>{scene.title}</b>
-              <p>{scene.story}</p>
-              <button onClick={() => generateImage(i)}>Visualize</button>
-              <button onClick={() => handleReact(i)}>Screen</button>
-              {scene.image ? <img src={scene.image} alt={scene.title} /> : null}
-              {state.audienceSims
-                .filter((sim) => sim.reactions.at(i))
-                .map((sim, j) => (
-                  <div key={j} className="audience-sim">
-                    <b>{sim.name}</b>: <span>{sim.reactions.at(i)!}</span>
-                  </div>
-                ))}
-            </div>
-          ))}
         </div>
       </aside>
       <main className="main-layout">
@@ -423,7 +215,9 @@ ${state.audienceSims
               <button title="visualize" onClick={() => generateImage(state.frames.findIndex((s) => s.isShowing))}>
                 Visualize
               </button>
-              <button onClick={() => handleReact(state.frames.findIndex((s) => s.isShowing))}>Screen</button>
+              <button onClick={() => generateReaction(state.frames.findIndex((s) => s.isShowing))}>
+                Get reactions
+              </button>
             </div>
           ) : null}
 
