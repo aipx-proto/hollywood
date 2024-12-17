@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { tap } from "rxjs";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
 import { parseJsonStream } from "../lib/json-stream";
-import type { AppState } from "../storyboard";
+import type { AppState, Frame } from "../storyboard";
 
 export interface UseGenerateStoryboardFramesProps {
   state: AppState;
@@ -27,11 +27,11 @@ export function useGenerateStoryboardFrames(props: UseGenerateStoryboardFramesPr
         {
           role: "system",
           content:
-            `You are a Holywood storyboard artist. Create storyboard frames for the provided story. You have the freedom to consolidate, split, and reorder scenes into few key frames in a storyboard.
+            `You are a Holywood storyboard artist. Create storyboard frames for the provided story. You have the freedom to consolidate, split, and reorder scenes into few key frames in a storyboard. Make sure the last frame concludes the story within the narrative.
 For each frame, provide a title, and story description, and a visual snapshot. 
 The story should be the narrative behind the frame. Do your best storytelling.
 The visual snapshot is the decisive moment of the frame. Objectively describe the foreground, background, lighting, composition, camera angle and other visual design.
-In visual snapshot, DO NOT mention character names. Describe specific gender (either he or she), ethnicity, facial expression, body posture instead. Be objective. DO NOT mention art styles. 
+When there are characters in the visual snapshot, DO NOT mention character names. Describe specific gender (either he or she), age, ethnicity, facial expression, hair, body posture, and clothing instead. Be objective. DO NOT mention art styles. 
 
 Respond in this JSON foramt;
 
@@ -71,9 +71,13 @@ ${state.acts.map((a) => `${a.description}`).join("\n")}
         tap((v) => {
           if (typeof v.key === "number") {
             setState((prev) => {
+              const frame = v.value as any as Frame;
               return {
                 ...prev,
-                frames: [...prev.frames, v.value as any],
+                frames: [
+                  ...prev.frames,
+                  { ...frame, image: `https://placehold.co/720?text=${encodeURIComponent(frame.title)}` },
+                ],
               };
             });
           }

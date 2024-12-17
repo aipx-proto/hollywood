@@ -4,7 +4,7 @@ import type { AzureTtsNode } from "../lib/ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
 import type { AIBarEventDetail } from "../lib/ai-bar/lib/events";
 import { system, user } from "../lib/message";
-import type { AudienceSim } from "../storyboard";
+import type { AudienceSim, Frame } from "../storyboard";
 
 const azureStt = document.querySelector<AzureSttNode>("azure-stt-node")!;
 const azureTts = document.querySelector<AzureTtsNode>("azure-tts-node")!;
@@ -18,12 +18,35 @@ interface TranscriptEntry {
 export class GroupInterview {
   #transcript: TranscriptEntry[] = [];
   #sims: AudienceSim[] = [];
+  #frames: Frame[] = [];
   #focusedMember: AudienceSim | null = null;
   #interactionRequest$ = new Subject<{ focusedSim: AudienceSim | null; speech: string }>();
   #abortController = new AbortController();
+  #framesShownWithImage = new Set<number>();
 
   setGroupMembers(sims: AudienceSim[]) {
     this.#sims = sims;
+  }
+
+  setFocusedFrameIndex(index: number | null) {
+    if (index === null || index < 0) {
+      return;
+    }
+
+    const activeFrame = this.#frames.at(index);
+    if (!activeFrame) throw new Error(`No frame found at index: ${index}`);
+
+    if (!this.#framesShownWithImage.has(index)) {
+      this.#framesShownWithImage.add(index);
+      this.#transcript = [
+        ...this.#transcript,
+        { speaker: "host", text: `(showing scene ${index + 1}: ${activeFrame.visualSnapshot}) ${activeFrame.story}` },
+      ];
+    }
+  }
+
+  setFrames(frames: Frame[]) {
+    this.#frames = frames;
   }
 
   setFocusedMember(index: number | null) {
@@ -88,6 +111,7 @@ ${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.
 
 Now, simulate a group interview between the audience members and the host. Speak as members of the audience turn by turn. If the question is unclear, pass it back to the host. 
 Take turns naturally but do not exceed three turns. One sentence one speaker per turn.
+You MUST only use the speakAs tool to respond. In the end, do not respond with additional content.
               `,
                 user`${userSpeech}`,
               ],

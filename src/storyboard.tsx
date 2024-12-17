@@ -1,4 +1,4 @@
-import { StrictMode, useMemo, useState } from "react";
+import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Avartar } from "./components/avatar-element";
 import { generateMockStory } from "./data/mock-story";
@@ -74,11 +74,18 @@ function App() {
 
   const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
 
-  const { inviteAudience } = useInviteAudience({ state, setState, patchState, groupInterview });
+  const { inviteAudience } = useInviteAudience({ state, setState, patchState });
   const { generateStory } = useGenerateStory({ state, setState });
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
   const { generateImage } = useGenerateImage({ state, setState });
   const { generateReaction } = useGenerateReaction({ state, setState });
+
+  // synchronize state with group interview
+  useEffect(() => {
+    groupInterview.setGroupMembers(state.audienceSims);
+    groupInterview.setFocusedFrameIndex(state.frames.findIndex((s) => s.isShowing));
+    groupInterview.setFrames(state.frames);
+  }, [state]);
 
   const handleAvatarPress = (i: number | null) => {
     aiBar?.startRecording();

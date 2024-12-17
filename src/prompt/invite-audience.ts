@@ -1,17 +1,15 @@
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { filter, tap } from "rxjs";
 import { allowedNames } from "../components/avatar-element";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
 import { parseJsonStream } from "../lib/json-stream";
 import { system, user } from "../lib/message";
 import type { AppState, AudienceSim } from "../storyboard";
-import type { GroupInterview } from "./group-interview";
 
 export interface UseInviteAudienceProps {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   patchState: (patch: Partial<AppState>) => void;
-  groupInterview: GroupInterview;
 }
 
 const llmNode = document.querySelector<LlmNode>("llm-node");
@@ -72,10 +70,6 @@ interface Persona = {
     },
     [state.targetAudience],
   );
-
-  useEffect(() => {
-    props.groupInterview.setGroupMembers(state.audienceSims);
-  }, [state.audienceSims]);
 
   return { inviteAudience };
 }
