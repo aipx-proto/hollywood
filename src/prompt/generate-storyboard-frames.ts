@@ -56,7 +56,7 @@ ${state.acts.map((a) => `${a.description}`).join("\n")}
 `.trim(),
         },
       ],
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       temperature: 0.7,
       response_format: {
         type: "json_object",

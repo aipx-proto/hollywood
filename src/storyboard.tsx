@@ -249,7 +249,6 @@ function App() {
                 key={i}
                 aria-pressed={scene.isShowing}
                 onClick={() => {
-                  narrateStory(scene.story);
                   setState((prev) => ({
                     ...prev,
                     frames: prev.frames.map((scene, j) => ({ ...scene, isShowing: i === j })),
@@ -266,6 +265,7 @@ function App() {
                 <h2>{activeFrame?.title}</h2>
                 <p>{activeFrame?.story}</p>
                 <div>
+                  <button onClick={() => narrateStory(activeFrame!.story)}>Listen</button>
                   <button
                     title="visualize"
                     onClick={() =>

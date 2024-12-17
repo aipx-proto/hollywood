@@ -22,7 +22,7 @@ export function useGenerateImage(props: UseGenerateImageProps) {
           j === i
             ? {
                 ...scene,
-                image: `https://placehold.co/720?text=${encodeURIComponent(scene.title + "\nsketching...")}`,
+                image: `https://placehold.co/720?text=${encodeURIComponent(`Sketching ${scene.title}...`)}`,
               }
             : scene,
         ),
