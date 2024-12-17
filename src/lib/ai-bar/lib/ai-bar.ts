@@ -47,7 +47,7 @@ export class AIBar extends HTMLElement {
     this.addEventListener("event", (event) => {
       const typedEvent = event as CustomEvent<AIBarEventDetail>;
       this.handleStartPushToTalk(typedEvent);
-      this.handleEndPushToTalk(typedEvent);
+      this.handleStopPushToTalk(typedEvent);
       this.handleRecognition(typedEvent);
       this.handleGenerated(typedEvent);
       this.handleDragged(typedEvent);
@@ -84,7 +84,7 @@ export class AIBar extends HTMLElement {
     this.querySelector<RecordingStatusProvider>(`[provides*="recording-status"]`)?.setIsRecording(true);
   }
 
-  public endRecording() {
+  public stopRecording() {
     this.querySelector<SpeechToTextProvider>(`[provides*="stt"]`)?.stop();
     this.querySelector<RecordingStatusProvider>(`[provides*="recording-status"]`)?.setIsRecording(false);
   }
@@ -117,11 +117,11 @@ export class AIBar extends HTMLElement {
     this.startRecording();
   }
 
-  private handleEndPushToTalk(typedEvent: CustomEvent<AIBarEventDetail>) {
+  private handleStopPushToTalk(typedEvent: CustomEvent<AIBarEventDetail>) {
     if (!typedEvent.detail.pttReleased) return;
     typedEvent.stopPropagation();
 
-    this.endRecording();
+    this.stopRecording();
   }
 
   private handleRecognition(typedEvent: CustomEvent<AIBarEventDetail>) {

@@ -1,9 +1,11 @@
 import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Avartar } from "./components/avatar-element";
+import { generateMockStory } from "./data/mock-story";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
-import type { AIBar } from "./lib/ai-bar/lib/ai-bar";
+import type { AIBar, AIBarEventDetail } from "./lib/ai-bar/lib/ai-bar";
+import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { useGenerateImage } from "./prompt/generate-image";
 import { useGenerateReaction } from "./prompt/generate-reaction";
@@ -54,6 +56,7 @@ export interface AudienceSim {
 }
 
 const aiBar = document.querySelector<AIBar>("ai-bar");
+const azureStt = document.querySelector<AzureSttNode>("azure-stt-node")!;
 
 function App() {
   const [state, setState] = useState<AppState>({
@@ -76,9 +79,13 @@ function App() {
   const { generateImage } = useGenerateImage({ state, setState });
   const { generateReaction } = useGenerateReaction({ state, setState });
 
-  const handleAvatarPress = (i: number) => {};
+  const handleAvatarPress = (i: number) => {
+    aiBar?.startRecording();
+  };
 
-  const handleAvatarRelease = (i: number) => {};
+  const handleAvatarRelease = (i: number) => {
+    aiBar?.stopRecording();
+  };
 
   // speak the story when activating a scene
   const activeFrame = useMemo(() => state.frames.find((scene) => scene.isShowing), [state.frames]);
@@ -86,9 +93,33 @@ function App() {
     aiBar?.speak(content, { interrupt: true });
   };
 
+  function startVoiceInteraction() {
+    azureStt?.startMicrophone();
+
+    // intercept speech event
+    azureStt.addEventListener("event", (event) => {
+      const typedEvent = event as CustomEvent<AIBarEventDetail>;
+      if (!typedEvent.detail.recognized) return;
+      typedEvent.stopPropagation();
+
+      if (!typedEvent.detail.recognized.text) {
+        // just interrupt
+      } else {
+        const recognizedText = typedEvent.detail.recognized.text;
+        console.log(recognizedText);
+      }
+    });
+  }
+
+  const enterDebugMode = () => {
+    patchState(generateMockStory());
+    startVoiceInteraction();
+  };
+
   return (
     <div className="app-layout" data-has-scenes={state.frames.length > 0}>
       <aside className="control-panel">
+        <button onClick={enterDebugMode}>Debug mode</button>
         <h2>Goal</h2>
         <textarea
           value={state.goal}
@@ -181,6 +212,7 @@ function App() {
         ></textarea>
         <button
           onClick={() => {
+            startVoiceInteraction();
             inviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber);
             generateStoryboardFrames();
           }}

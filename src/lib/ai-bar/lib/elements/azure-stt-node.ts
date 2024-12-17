@@ -33,7 +33,8 @@ export class AzureSttNode extends HTMLElement implements SpeechToTextProvider {
     if (!this.isMicrophoneStarted) this.startMicrophone();
 
     const connection = this.closest<AIBar>("ai-bar")?.getAzureConnection();
-    if (!connection) throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
+    if (!connection)
+      throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
 
     const { speechKey, speechRegion } = connection;
 
@@ -105,7 +106,7 @@ interface TranscribeResult {
     {
       channel: number;
       text: string;
-    }
+    },
   ];
   duration: number;
   phrases: [
@@ -121,9 +122,9 @@ interface TranscribeResult {
           text: string;
           offset: number;
           duration: number;
-        }
+        },
       ];
-    }
+    },
   ];
 }
 
@@ -151,7 +152,7 @@ async function transcribe(options: TranscribeOptions): Promise<TranscribeResult>
   const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
 
   const definition = JSON.stringify({
-    locales: [...new Set([locale, "en-US", "de-DE", "ja-JP", "zh-CN", "es-ES", "fr-FR"])],
+    locales: [locale],
   });
 
   const formDataParts = [
@@ -182,18 +183,21 @@ async function transcribe(options: TranscribeOptions): Promise<TranscribeResult>
     },
   });
 
-  const response = await fetch(`https://${options.speechRegion}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "ocp-apim-subscription-key": accessToken,
-      "Content-Type": "multipart/form-data; boundary=" + boundary,
+  const response = await fetch(
+    `https://${options.speechRegion}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "ocp-apim-subscription-key": accessToken,
+        "Content-Type": "multipart/form-data; boundary=" + boundary,
+      },
+      // @ts-expect-error, ref: https://github.com/node-fetch/node-fetch/issues/1769
+      duplex: "half",
+      body: bodyStream,
+      signal: options.signal,
     },
-    // @ts-expect-error, ref: https://github.com/node-fetch/node-fetch/issues/1769
-    duplex: "half",
-    body: bodyStream,
-    signal: options.signal,
-  });
+  );
 
   const result = await response.json();
   if (!response.ok) throw new Error(JSON.stringify(result));

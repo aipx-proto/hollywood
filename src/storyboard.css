@@ -103,6 +103,7 @@ body {
 
 .control-panel {
   display: grid;
+  align-items: start;
   min-height: 0;
   overflow-y: auto;
 }
