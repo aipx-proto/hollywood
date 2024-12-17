@@ -4,13 +4,13 @@ import { Avartar } from "./components/avatar-element";
 import { generateMockStory } from "./data/mock-story";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
-import type { AIBar, AIBarEventDetail } from "./lib/ai-bar/lib/ai-bar";
-import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
+import type { AIBar } from "./lib/ai-bar/lib/ai-bar";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { useGenerateImage } from "./prompt/generate-image";
 import { useGenerateReaction } from "./prompt/generate-reaction";
 import { useGenerateStory } from "./prompt/generate-story";
 import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
+import { GroupInterview } from "./prompt/group-interview";
 import { useInviteAudience } from "./prompt/invite-audience";
 import "./storyboard.css";
 
@@ -56,7 +56,8 @@ export interface AudienceSim {
 }
 
 const aiBar = document.querySelector<AIBar>("ai-bar");
-const azureStt = document.querySelector<AzureSttNode>("azure-stt-node")!;
+
+const groupInterview = new GroupInterview();
 
 function App() {
   const [state, setState] = useState<AppState>({
@@ -73,7 +74,7 @@ function App() {
 
   const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
 
-  const { inviteAudience } = useInviteAudience({ state, setState, patchState });
+  const { inviteAudience } = useInviteAudience({ state, setState, patchState, groupInterview });
   const { generateStory } = useGenerateStory({ state, setState });
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
   const { generateImage } = useGenerateImage({ state, setState });
@@ -81,6 +82,7 @@ function App() {
 
   const handleAvatarPress = (i: number) => {
     aiBar?.startRecording();
+    groupInterview.setFocusedMember(i);
   };
 
   const handleAvatarRelease = (i: number) => {
@@ -93,27 +95,9 @@ function App() {
     aiBar?.speak(content, { interrupt: true });
   };
 
-  function startVoiceInteraction() {
-    azureStt?.startMicrophone();
-
-    // intercept speech event
-    azureStt.addEventListener("event", (event) => {
-      const typedEvent = event as CustomEvent<AIBarEventDetail>;
-      if (!typedEvent.detail.recognized) return;
-      typedEvent.stopPropagation();
-
-      if (!typedEvent.detail.recognized.text) {
-        // just interrupt
-      } else {
-        const recognizedText = typedEvent.detail.recognized.text;
-        console.log(recognizedText);
-      }
-    });
-  }
-
   const enterDebugMode = () => {
     patchState(generateMockStory());
-    startVoiceInteraction();
+    groupInterview.start();
   };
 
   return (
@@ -212,7 +196,7 @@ function App() {
         ></textarea>
         <button
           onClick={() => {
-            startVoiceInteraction();
+            groupInterview.start();
             inviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber);
             generateStoryboardFrames();
           }}
