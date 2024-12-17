@@ -32,6 +32,30 @@ export const Avartar: React.FC<AvatarProps> = (props) => {
   return <img src={`https://api.dicebear.com/9.x/micah/svg?seed=${props.alt}`} draggable={false} {...rest} />;
 };
 
+export async function generateEmojiGroup(options: {
+  targetElement: HTMLElement;
+  emojisPerSecond: number;
+  durationSeconds: number;
+  delaySeconds: number;
+  emoji?: string;
+}) {
+  const { targetElement, emojisPerSecond, durationSeconds, delaySeconds, emoji } = options;
+
+  await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+
+  const totalEmojis = emojisPerSecond * durationSeconds;
+
+  // scattered emojis randomly with the duration
+  for (let i = 0; i < totalEmojis; i++) {
+    setTimeout(
+      () => {
+        generateEmoji(targetElement, emoji);
+      },
+      Math.random() * durationSeconds * 1000,
+    );
+  }
+}
+
 export const generateEmoji = (targetElement: HTMLElement, emoji = "😊") => {
   const element = document.createElement("div");
   element.innerHTML = emoji;

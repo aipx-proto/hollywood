@@ -1,5 +1,5 @@
 import { Subject, switchMap } from "rxjs";
-import { personas } from "../components/avatar-element";
+import { generateEmojiGroup, personas } from "../components/avatar-element";
 import type { AzureSttNode } from "../lib/ai-bar/lib/elements/azure-stt-node";
 import type { AzureTtsNode, StateChangeEventDetail } from "../lib/ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../lib/ai-bar/lib/elements/llm-node";
@@ -25,6 +25,8 @@ export class GroupInterview {
   #abortController = new AbortController();
   #framesShownWithImage = new Set<number>();
 
+  #emojiReactionRequest$ = new Subject<{ focusedFrame: Frame }>();
+
   setGroupMembers(sims: AudienceSim[]) {
     this.#sims = sims;
   }
@@ -44,6 +46,12 @@ export class GroupInterview {
         { speaker: "host", text: `(showing scene ${index + 1}: ${activeFrame.visualSnapshot}) ${activeFrame.story}` },
       ];
     }
+  }
+
+  getEmojiReactions(index: number) {
+    const activeFrame = this.#frames.at(index);
+    if (!activeFrame) throw new Error(`No frame found at index: ${index}`);
+    this.#emojiReactionRequest$.next({ focusedFrame: activeFrame });
   }
 
   setFrames(frames: Frame[]) {
@@ -111,6 +119,70 @@ export class GroupInterview {
       return `${props.name} spoke: ${props.utterance}`;
     }
 
+    function reactWithEmoji(props: { name: string; emoji: string; intensity: number }) {
+      generateEmojiGroup({
+        targetElement: document.querySelector(`[data-voice][data-name="${props.name}"]`)!,
+        emojisPerSecond: props.intensity * 1,
+        durationSeconds: 2 + Math.random() * 2,
+        delaySeconds: Math.random(),
+        emoji: props.emoji,
+      });
+    }
+
+    this.#emojiReactionRequest$
+      .pipe(
+        switchMap(async (req) => {
+          aoai?.beta.chat.completions.runTools({
+            messages: [
+              system`You are simulating a advertising commerical test screening event. The audience consists of the following people:
+${this.#sims
+  .toSorted(() => Math.random() - 0.5)
+  .map((sim) => `- ${sim.name}: ${sim.background}`)
+  .join("\n")}
+
+${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.map((t) => `${t.speaker}: ${t.text}`).join("\n")}` : ""}
+
+Now, simulate how each audience member reacts to the latest scene with emojis.
+Use the reactWithEmoji tool to react as each member. Choose the best emoji to express character's feeling. Intensity should be on a scale of 1-5.
+`,
+              user`
+Please simulate the reactions to the current scene: ${req.focusedFrame.story}
+`,
+            ],
+            model: "gpt-4o",
+            tools: [
+              {
+                type: "function",
+                function: {
+                  function: reactWithEmoji,
+                  description: "React with an emoji",
+                  parse: JSON.parse,
+                  parameters: {
+                    type: "object",
+                    required: ["name", "emoji", "intensity"],
+                    properties: {
+                      name: {
+                        type: "string",
+                        description: "Name of the character",
+                      },
+                      emoji: {
+                        type: "string",
+                        description: "Emoji to react with",
+                      },
+                      intensity: {
+                        type: "number",
+                        description: "Intensity of the reaction",
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          });
+        }),
+      )
+      .subscribe();
+
     this.#interactionRequest$
       .pipe(
         switchMap(async (req) => {
@@ -119,7 +191,7 @@ export class GroupInterview {
           aoai?.beta.chat.completions.runTools(
             {
               messages: [
-                system`You are simulating a commerical movie test screening event. The audience consists of the following people:
+                system`You are simulating a advertising commerical test screening event. The audience consists of the following people:
 ${this.#sims.map((sim) => `- ${sim.name}: ${sim.background}`).join("\n")}
 
 ${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.map((t) => `${t.speaker}: ${t.text}`).join("\n")}` : ""}

@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Avartar, generateEmoji, personas } from "./components/avatar-element";
+import { Avartar, generateEmojiGroup, personas } from "./components/avatar-element";
 import { generateMockStory } from "./data/mock-story";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
@@ -119,6 +119,7 @@ function App() {
   const activeFrame = useMemo(() => state.frames.find((scene) => scene.isShowing), [state.frames]);
   const narrateStory = (content: string) => {
     aiBar?.speak(content, { interrupt: true });
+    groupInterview.getEmojiReactions(state.frames.findIndex((s) => s.isShowing));
   };
 
   const enterDebugMode = () => {
@@ -130,7 +131,16 @@ function App() {
     <div className="app-layout" data-has-scenes={state.frames.length > 0}>
       <aside className="control-panel">
         <div>
-          <button onClick={() => generateEmoji(document.querySelector(`[data-emoji="a"]`) as HTMLElement)}>
+          <button
+            onClick={() =>
+              generateEmojiGroup({
+                targetElement: document.querySelector(`[data-debug-emoji]`) as HTMLElement,
+                emojisPerSecond: 5,
+                durationSeconds: 3,
+                delaySeconds: 0.5,
+              })
+            }
+          >
             Debug emoji
           </button>
           <button onClick={enterDebugMode}>Debug screening</button>
@@ -303,7 +313,8 @@ function App() {
           {state.audienceSims.map((sim, i) => (
             <button
               key={i}
-              data-emoji="a"
+              data-debug-emoji
+              data-name={sim.name}
               data-voice={personas.find((p) => p.name === sim.name)?.voiceId ?? ""}
               onMouseDown={() => handleAvatarPress(i)}
               onMouseUp={() => handleAvatarRelease()}
