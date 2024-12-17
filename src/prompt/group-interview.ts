@@ -123,8 +123,8 @@ export class GroupInterview {
       generateEmojiGroup({
         targetElement: document.querySelector<HTMLElement>(`[data-voice][data-name="${props.name}"]`)!,
         emojisPerSecond: props.intensity * 1,
-        durationSeconds: 2 + Math.random() * 2,
-        delaySeconds: Math.random(),
+        durationSeconds: 2 + Math.random() * 3,
+        delaySeconds: Math.random() * 3,
         emoji: props.emoji,
       });
     }
