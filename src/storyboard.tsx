@@ -8,7 +8,6 @@ import type { AIBar } from "./lib/ai-bar/lib/ai-bar";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { useGenerateAudience } from "./prompt/generate-audience";
 import { useGenerateImage } from "./prompt/generate-image";
-import { useGenerateReaction } from "./prompt/generate-reaction";
 import { useGenerateStory } from "./prompt/generate-story";
 import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
 import { GroupInterview } from "./prompt/group-interview";
@@ -46,6 +45,7 @@ export interface Frame {
   visualSnapshot: string;
   image?: string;
   isShowing?: boolean;
+  isGenerated?: boolean;
 }
 
 export interface AudienceSim {
@@ -78,7 +78,24 @@ function App() {
   const { generateStory } = useGenerateStory({ state, setState });
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
   const { generateImage } = useGenerateImage({ state, setState });
-  const { generateReaction } = useGenerateReaction({ state, setState });
+
+  // automatically generate image when a scene is added
+  useEffect(() => {
+    const newFrames = state.frames.map((frame, index) => ({ frame, index })).filter((item) => !item.frame.isGenerated);
+    if (!newFrames.length) return;
+
+    console.log(`[image-gen] ${newFrames.length} new frames detected`);
+
+    // mark all as isGenerated
+    setState((prev) => ({
+      ...prev,
+      frames: prev.frames.map((frame) => ({ ...frame, isGenerated: true })),
+    }));
+
+    newFrames.forEach((item) => {
+      generateImage(item.index);
+    });
+  }, [state.frames]);
 
   // synchronize state with group interview
   useEffect(() => {

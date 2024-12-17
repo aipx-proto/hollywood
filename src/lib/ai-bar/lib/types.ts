@@ -40,6 +40,8 @@ export interface AzureConnectionProvider extends HTMLElement {
     mapKey: string;
     speechRegion: string;
     speechKey: string;
+    aoaiEndpoint2: string;
+    aoaiKey2: string;
   };
 }
 

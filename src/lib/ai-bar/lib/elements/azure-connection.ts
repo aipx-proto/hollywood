@@ -52,11 +52,17 @@ export class AoaiConnectionButton extends HTMLElement implements AzureConnection
       <label for="map-key">Azure Map Key</label>
       <input type="password" id="map-key" name="map-key" />
 
+      <label for="aoai-endpoint-2">AOAI Endpoint 2</label>
+      <input type="url" id="aoai-endpoint-2" name="aoai-endpoint-2"
+        placeholder="https://replace-endpoint-name.openai.azure.com/" />
+
+      <label for="aoai-key-2">AOAI Key 2</label>
+      <input type="password" id="aoai-key-2" name="aoai-key-2" />
     </div>
     <button>Done</button>
   </form>
 </dialog>
-    `
+    `,
   );
 
   connectedCallback() {
@@ -95,7 +101,20 @@ export class AoaiConnectionButton extends HTMLElement implements AzureConnection
     const speechKey = this.shadowRoot.querySelector<HTMLInputElement>("#speech-key")!.value;
     const elevenLabsKey = this.shadowRoot.querySelector<HTMLInputElement>("#eleven-labs-key")!.value;
 
-    return { mapKey, aoaiEndpoint, aoaiDeploymentName, aoaiKey, speechRegion, speechKey, elevenLabsKey };
+    const aoaiEndpoint2 = this.shadowRoot.querySelector<HTMLInputElement>("#aoai-endpoint-2")!.value;
+    const aoaiKey2 = this.shadowRoot.querySelector<HTMLInputElement>("#aoai-key-2")!.value;
+
+    return {
+      mapKey,
+      aoaiEndpoint,
+      aoaiDeploymentName,
+      aoaiKey,
+      speechRegion,
+      speechKey,
+      elevenLabsKey,
+      aoaiKey2,
+      aoaiEndpoint2,
+    };
   }
 }
 

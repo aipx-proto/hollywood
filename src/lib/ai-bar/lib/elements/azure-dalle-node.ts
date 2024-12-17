@@ -1,5 +1,4 @@
-import type { AIBar } from "../ai-bar";
-import { CapacityManager } from "./lib/capacity-manager";
+import { EndpointLoadBalancer } from "./lib/endpoint-balancer";
 
 export interface ImageGenerationResult {
   created: number;
@@ -9,26 +8,22 @@ export interface ImageGenerationResult {
   }[];
 }
 
-const capacityManager = new CapacityManager();
-
 export const promptImprovementsMap = new Map<string, string>();
+const endpointLoadBalancer = new EndpointLoadBalancer();
 
 export class AzureDalleNode extends HTMLElement {
   async generateImage(config: { prompt: string; style: "natural" | "vivid"; revise?: boolean }) {
-    const credentials = this.closest<AIBar>("ai-bar")?.getAzureConnection();
-    if (!credentials)
-      throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
+    const { connection, capacityManager } = endpointLoadBalancer.next();
+    await capacityManager.consumeCapacity();
 
     const fetchWithRetry = getFetchWithRetry(3);
 
-    await capacityManager.getCapacity();
-
     const response = await fetchWithRetry(
-      `${credentials.aoaiEndpoint}openai/deployments/dall-e-3/images/generations?api-version=2024-10-21`,
+      `${connection.endpoint}openai/deployments/dall-e-3/images/generations?api-version=2024-10-21`,
       {
         method: "POST",
         headers: {
-          "api-key": credentials.aoaiKey,
+          "api-key": connection.key,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ ...config }),

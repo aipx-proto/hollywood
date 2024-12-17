@@ -1,15 +1,27 @@
 export class CapacityManager {
+  constructor(config: { capacity: number }) {
+    this.#capacity = config.capacity;
+  }
+
   #capacity = 3;
   events = new EventTarget();
 
-  async getCapacity(): Promise<void> {
+  async consumeCapacity(): Promise<void> {
     if (this.#capacity > 0) {
       this.#capacity--;
       console.log(`[capacity-manager] capacity decreased to ${this.#capacity}`);
     } else {
       await new Promise((resolve) => this.events.addEventListener("capacityincreased", resolve, { once: true }));
-      return this.getCapacity();
+      return this.consumeCapacity();
     }
+  }
+
+  hasCapacity() {
+    return this.#capacity > 0;
+  }
+
+  peekCapacity() {
+    return this.#capacity;
   }
 
   recoverAfterMs(timeoutMs: number) {
