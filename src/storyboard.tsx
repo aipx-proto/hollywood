@@ -11,7 +11,7 @@ import { useGenerateReaction } from "./prompt/generate-reaction";
 import { useGenerateStory } from "./prompt/generate-story";
 import { useGenerateStoryboardFrames } from "./prompt/generate-storyboard-frames";
 import { GroupInterview } from "./prompt/group-interview";
-import { useInviteAudience } from "./prompt/invite-audience";
+import { useGenerateAudience } from "./prompt/invite-audience";
 import "./storyboard.css";
 
 loadAIBar();
@@ -74,7 +74,7 @@ function App() {
 
   const patchState = (patch: Partial<AppState>) => setState((p) => ({ ...p, ...patch }));
 
-  const { inviteAudience } = useInviteAudience({ state, setState, patchState });
+  const { generateAudience } = useGenerateAudience({ state, setState, patchState });
   const { generateStory } = useGenerateStory({ state, setState });
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
   const { generateImage } = useGenerateImage({ state, setState });
@@ -204,7 +204,7 @@ function App() {
         <button
           onClick={() => {
             groupInterview.start();
-            inviteAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber);
+            generateAudience(document.querySelector<HTMLInputElement>(`[name="audienceCount"]`)!.valueAsNumber);
             generateStoryboardFrames();
           }}
         >

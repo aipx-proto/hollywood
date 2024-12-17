@@ -14,10 +14,10 @@ export interface UseInviteAudienceProps {
 
 const llmNode = document.querySelector<LlmNode>("llm-node");
 
-export function useInviteAudience(props: UseInviteAudienceProps) {
+export function useGenerateAudience(props: UseInviteAudienceProps) {
   const { state, setState, patchState } = props;
 
-  const inviteAudience = useCallback(
+  const generateAudience = useCallback(
     async (count?: number) => {
       const aoai = llmNode?.getClient();
       if (!aoai) return;
@@ -71,5 +71,5 @@ interface Persona = {
     [state.targetAudience],
   );
 
-  return { inviteAudience };
+  return { generateAudience };
 }
