@@ -1,8 +1,9 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Avartar } from "./components/avatar-element";
 import { narratives, type Narrative } from "./data/narratives";
 import { techniques, type Technique } from "./data/techniques";
+import type { AIBar } from "./lib/ai-bar/lib/ai-bar";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { useGenerateImage } from "./prompt/generate-image";
 import { useGenerateReaction } from "./prompt/generate-reaction";
@@ -52,6 +53,8 @@ export interface AudienceSim {
   feedback: string;
 }
 
+const aiBar = document.querySelector<AIBar>("ai-bar");
+
 function App() {
   const [state, setState] = useState<AppState>({
     goal: "Promote a coffee brand for diverse communities in Seattle",
@@ -72,6 +75,16 @@ function App() {
   const { generateStoryboardFrames } = useGenerateStoryboardFrames({ state, setState });
   const { generateImage } = useGenerateImage({ state, setState });
   const { generateReaction } = useGenerateReaction({ state, setState });
+
+  const handleAvatarPress = (i: number) => {};
+
+  const handleAvatarRelease = (i: number) => {};
+
+  // speak the story when activating a scene
+  const activeFrame = useMemo(() => state.frames.find((scene) => scene.isShowing), [state.frames]);
+  const narrateStory = (content: string) => {
+    aiBar?.speak(content, { interrupt: true });
+  };
 
   return (
     <div className="app-layout" data-has-scenes={state.frames.length > 0}>
@@ -184,12 +197,8 @@ function App() {
       </aside>
       <main className="main-layout">
         <div className="screens">
-          {state.frames.find((scene) => scene.isShowing)?.image ? (
-            <img
-              src={state.frames.find((scene) => scene.isShowing)!.image}
-              alt={state.frames.find((scene) => scene.isShowing)?.visualSnapshot}
-              title={state.frames.find((scene) => scene.isShowing)?.visualSnapshot}
-            />
+          {activeFrame?.image ? (
+            <img src={activeFrame!.image} alt={activeFrame?.visualSnapshot} title={activeFrame?.visualSnapshot} />
           ) : (
             <img src="https://placehold.co/720?text=Screen" alt="screen" />
           )}
@@ -199,22 +208,23 @@ function App() {
               <button
                 key={i}
                 aria-pressed={scene.isShowing}
-                onClick={() =>
+                onClick={() => {
+                  narrateStory(scene.story);
                   setState((prev) => ({
                     ...prev,
                     frames: prev.frames.map((scene, j) => ({ ...scene, isShowing: i === j })),
-                  }))
-                }
+                  }));
+                }}
               >
                 {i + 1}
               </button>
             ))}
           </div>
-          {state.frames.find((scene) => scene.isShowing) ? (
+          {activeFrame ? (
             <div>
               <div className="story-card">
-                <h2>{state.frames.find((scene) => scene.isShowing)?.title}</h2>
-                <p>{state.frames.find((scene) => scene.isShowing)?.story}</p>
+                <h2>{activeFrame?.title}</h2>
+                <p>{activeFrame?.story}</p>
                 <div>
                   <button title="visualize" onClick={() => generateImage(state.frames.findIndex((s) => s.isShowing))}>
                     Visualize
@@ -239,7 +249,9 @@ function App() {
 
         <div className="audience-layer">
           {state.audienceSims.map((sim, i) => (
-            <Avartar key={i} alt={sim.name} title={`${sim.name}\n${sim.background}`} />
+            <button key={i} onMouseDown={() => handleAvatarPress(i)} onMouseUp={() => handleAvatarRelease(i)}>
+              <Avartar alt={sim.name} title={`${sim.name}\n${sim.background}`} />
+            </button>
           ))}
         </div>
       </main>

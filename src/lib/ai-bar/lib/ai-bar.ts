@@ -1,5 +1,12 @@
 import type { AIBarEventDetail } from "./events";
-import type { AzureConnectionProvider, LlmProvider, RecordingStatusProvider, SpeechToTextProvider, TextToSpeechProvider, VisionProvider } from "./types";
+import type {
+  AzureConnectionProvider,
+  LlmProvider,
+  RecordingStatusProvider,
+  SpeechToTextProvider,
+  TextToSpeechProvider,
+  VisionProvider,
+} from "./types";
 import { attachShadowHtml } from "./wc-utils/attach-html";
 
 export * from "./events";
@@ -30,7 +37,7 @@ export class AIBar extends HTMLElement {
     <div id="widget-container">
       <slot name="toolbar"></slot>
     </div>
-`
+`,
   );
 
   connectedCallback() {
@@ -82,8 +89,12 @@ export class AIBar extends HTMLElement {
     this.querySelector<RecordingStatusProvider>(`[provides*="recording-status"]`)?.setIsRecording(false);
   }
 
-  public speak(content: string, updateThread = false) {
-    if (updateThread) {
+  public speak(content: string, config: { updateThread?: boolean; interrupt?: boolean } = {}) {
+    if (config.interrupt) {
+      this.querySelector<TextToSpeechProvider>(`[provides*="tts"]`)?.clear();
+    }
+
+    if (config.updateThread) {
       this.querySelector<LlmProvider>(`[provides*="llm"]`)?.appendAssistantMessage(content);
     } else {
       this.querySelector<TextToSpeechProvider>(`[provides*="tts"]`)?.queue(content);
