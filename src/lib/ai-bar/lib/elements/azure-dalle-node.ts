@@ -11,8 +11,10 @@ export interface ImageGenerationResult {
 
 const capacityManager = new CapacityManager();
 
+export const promptImprovementsMap = new Map<string, string>();
+
 export class AzureDalleNode extends HTMLElement {
-  async generateImage(config: { prompt: string; style: "natural" | "vivid" }) {
+  async generateImage(config: { prompt: string; style: "natural" | "vivid"; revise?: boolean }) {
     const credentials = this.closest<AIBar>("ai-bar")?.getAzureConnection();
     if (!credentials)
       throw new Error("Unable to get credentials from the closest <ai-bar>. Did you forget to provide them?");
@@ -35,6 +37,10 @@ export class AzureDalleNode extends HTMLElement {
       .then((res) => res.json())
       .then((result) => result as ImageGenerationResult)
       .finally(() => capacityManager.recoverAfterMs(60_000));
+
+    if (response.data.at(0)?.revised_prompt) {
+      promptImprovementsMap.set(config.prompt, response.data.at(0)!.revised_prompt);
+    }
 
     if ((response as any).error) throw new Error((response as any).message);
 

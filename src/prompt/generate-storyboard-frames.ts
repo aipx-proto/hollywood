@@ -73,7 +73,13 @@ ${state.acts.map((a) => `${a.description}`).join("\n")}
                 ...prev,
                 frames: [
                   ...prev.frames,
-                  { ...frame, image: `https://placehold.co/720?text=${encodeURIComponent(frame.title)}` },
+                  {
+                    ...frame,
+                    image: `https://placehold.co/720?text=${encodeURIComponent(frame.title)}`,
+                    visualSnapshot:
+                      frame.visualSnapshot +
+                      ` A stylized illustration rendered in a manner reminiscent of a detailed comic book or graphic novel. The color palette is muted, employing earth tones with a sepia undertone, accented by teal highlights.  The lighting is dramatic, with a strong focus on the central figure, creating a chiaroscuro effect.  The style features heavy use of cross-hatching and stippling to create texture and depth, giving the image a slightly gritty, almost vintage feel.  The lines are bold and confident, with a high level of detail in the rendering of textures and surfaces. The overall aesthetic is dark, moody, and intense.`,
+                  },
                 ],
               };
             });

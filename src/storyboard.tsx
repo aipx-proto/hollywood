@@ -249,11 +249,16 @@ function App() {
                 <h2>{activeFrame?.title}</h2>
                 <p>{activeFrame?.story}</p>
                 <div>
-                  <button title="visualize" onClick={() => generateImage(state.frames.findIndex((s) => s.isShowing))}>
-                    Visualize
-                  </button>
-                  <button onClick={() => generateReaction(state.frames.findIndex((s) => s.isShowing))}>
-                    Get reactions
+                  <button
+                    title="visualize"
+                    onClick={() =>
+                      generateImage(
+                        state.frames.findIndex((s) => s.isShowing),
+                        true,
+                      )
+                    }
+                  >
+                    Resketch
                   </button>
                 </div>
               </div>

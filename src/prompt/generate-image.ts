@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { AzureDalleNode } from "../lib/ai-bar/lib/elements/azure-dalle-node";
+import { promptImprovementsMap, type AzureDalleNode } from "../lib/ai-bar/lib/elements/azure-dalle-node";
 import type { AppState } from "../storyboard";
 
 export interface UseGenerateImageProps {
@@ -11,7 +11,7 @@ export function useGenerateImage(props: UseGenerateImageProps) {
   const { state, setState } = props;
 
   const generateImage = useCallback(
-    async (i: number) => {
+    async (i: number, revise?: boolean) => {
       const azureDalleNode = document.querySelector<AzureDalleNode>("azure-dalle-node");
       if (!azureDalleNode) return;
 
@@ -28,11 +28,21 @@ export function useGenerateImage(props: UseGenerateImageProps) {
         ),
       }));
 
+      // use cached revised prompt
+      let finalPrompt = promptImprovementsMap.get(state.frames[i].visualSnapshot) ?? state.frames[i].visualSnapshot;
+      if (revise) {
+        if (finalPrompt) {
+          setState((prev) => ({
+            ...prev,
+            frames: prev.frames.map((scene, j) => (j === i ? { ...scene, visualSnapshot: finalPrompt } : scene)),
+          }));
+        }
+      }
+
       const img = await azureDalleNode.generateImage({
-        prompt:
-          state.frames[i].visualSnapshot +
-          ` A stylized illustration rendered in a manner reminiscent of a detailed comic book or graphic novel. The color palette is muted, employing earth tones with a sepia undertone, accented by teal highlights.  The lighting is dramatic, with a strong focus on the central figure, creating a chiaroscuro effect.  The style features heavy use of cross-hatching and stippling to create texture and depth, giving the image a slightly gritty, almost vintage feel.  The lines are bold and confident, with a high level of detail in the rendering of textures and surfaces. The overall aesthetic is dark, moody, and intense.`,
+        prompt: finalPrompt,
         style: "vivid",
+        revise,
       });
 
       setState((prev) => ({
