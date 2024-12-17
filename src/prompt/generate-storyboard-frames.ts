@@ -42,9 +42,6 @@ Respond in this JSON foramt;
     visualSnapshot: string; // scene description
   }[];
 }
-
-
-
           `.trim(),
         },
         {
