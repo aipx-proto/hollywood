@@ -144,6 +144,7 @@ ${this.#transcript.length ? `Here is the transcript so far:\n${this.#transcript.
 
 Now, simulate how each audience member reacts to the latest scene with emojis.
 Use the reactWithEmoji tool to react as each member. Choose the best emoji to express character's feeling. Intensity should be on a scale of 1-5.
+Prefer face emojis over objects or scenes.
 `,
               user`
 Please simulate the reactions to the current scene: ${req.focusedFrame.story}
@@ -167,11 +168,11 @@ Please simulate the reactions to the current scene: ${req.focusedFrame.story}
                       },
                       emoji: {
                         type: "string",
-                        description: "Emoji to react with",
+                        description: "A single Emoji to react with",
                       },
                       intensity: {
                         type: "number",
-                        description: "Intensity of the reaction",
+                        description: "Intensity of the reaction, 1 to 5",
                       },
                     },
                   },
